@@ -1,11 +1,10 @@
-import torch
 import torch.nn as nn
 
 from resnet_block import ResNetBlock
 
 # Can only process input image size multiple of (32, 32)
 class ResNet(nn.Module):
-    def __init__(self, layers, in_channels=1, num_classes=2):
+    def __init__(self, layers, in_channels=1, num_classes=2) -> None:
         if len(layers) != 4:
             raise ValueError(f"ResNet only supports 4 layers, not the provided layer list {layers} of length {len(layers)}")
             
@@ -51,7 +50,7 @@ class ResNet(nn.Module):
             nn.Linear(512, self.num_classes),
         )
         
-    def _make_layer(self, in_channels, out_channels, num_blocks, downsample):
+    def _make_layer(self, in_channels, out_channels, num_blocks, downsample) -> nn.Sequential:
         layers = []
         
         for i in range(num_blocks):

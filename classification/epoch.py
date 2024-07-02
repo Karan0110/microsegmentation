@@ -1,6 +1,6 @@
 import torch
 
-def train_model(model, device, train_loader, criterion, optimizer, epoch):
+def train_model(model, device, train_loader, criterion, optimizer, epoch) -> None:
     model.to(device)
     model.train()
     running_loss = 0.0

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 #Works on input of shape (batch, channels, [Image Shape])
 class TileChannels(nn.Module):
-    def __init__(self, n):
+    def __init__(self, n) -> None:
         super().__init__()
         self.n = n
 
@@ -14,7 +14,7 @@ class TileChannels(nn.Module):
         return tiled_x
 
 class ResNetBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
+    def __init__(self, in_channels, out_channels, stride=1) -> None:
         super().__init__()
         
         if stride not in [1,2]:
