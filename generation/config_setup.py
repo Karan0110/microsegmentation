@@ -1,11 +1,18 @@
-import subprocess
+# Command line arguments
+# exec_dir       : Path to bin folder for tubulaton
+# input_mesh_dir : Location of folder containing .vtk meshes for membrane/nucleus
+# output_dir     : Location to save data
+# time_steps     : Number of time steps to simulate
+# sample_name    : Unique ID for this particular job (as it is run as an array on SLURM, we don't want processes overwriting eachother!)
+
 import os
-import shutil
 import sys
 
 import numpy as np
 
-from tubulaton_config import default_config_dict 
+from tubulaton_config import default_config_dict
+
+VERBOSE = True
 
 def save_config_to_ini(config_dict : dict, file_path : str) -> None:
     with open(file_path, 'w') as file:
@@ -18,7 +25,8 @@ def generate_config_dict(default_config_dict : dict,
                          input_vtk_1 : str,
                          input_vtk_2 : str,
                          input_vtk_ref : str,
-                         num_time_steps : int) -> dict:
+                         num_time_steps : int,
+                         output_file_id : str) -> dict:
     config_dict = default_config_dict.copy()
 
     config_dict['nom_folder_output_vtk'] = tubulaton_dir
@@ -27,6 +35,7 @@ def generate_config_dict(default_config_dict : dict,
     config_dict['nom_input_vtk_2'] = input_vtk_2
     config_dict['nom_input_vtk_ref'] = input_vtk_ref
     config_dict['nom_input_vtk_ref_2'] = input_vtk_ref
+    config_dict['nom_output_vtk'] = output_file_id
 
     config_dict['vtk_steps'] = str(num_time_steps)
     config_dict['nb_max_steps'] = str(num_time_steps)
@@ -64,21 +73,16 @@ def generate_config_dict(default_config_dict : dict,
         config_dict[param] = str(new_value)
     
     return config_dict
-
-def save_tubulaton_vtk(exec_dir : str, 
-                       exec_file_name : str,
-                       output_dir : str,
-                       default_config_dict : dict,
-                       input_mesh_dir : str,
-                       num_time_steps : int,
-                       input_vtk_1 : str = "Cylinder_10000_EqualNucleation.vtk",
-                       input_vtk_2 : str = "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
-                       input_vtk_ref : str = "Cylinder_10000_EqualNucleation.vtk",
-                       output_file_name : str = 'tubulaton_raw.vtk',
-                       verbose : bool = False) -> None:
-
-    if verbose:
-        print("Running tubulaton...")
+    
+def generate_config(exec_dir : str, 
+                    output_dir : str,
+                    default_config_dict : dict,
+                    input_mesh_dir : str,
+                    num_time_steps : int,
+                    sample_name : str,
+                    input_vtk_1 : str = "Cylinder_10000_EqualNucleation.vtk",
+                    input_vtk_2 : str = "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
+                    input_vtk_ref : str = "Cylinder_10000_EqualNucleation.vtk") -> None:
     
     tubulaton_dir = os.path.join(output_dir, "tubulaton-run/")
 
@@ -88,30 +92,36 @@ def save_tubulaton_vtk(exec_dir : str,
                                        input_vtk_1=input_vtk_1,
                                        input_vtk_2=input_vtk_2,
                                        input_vtk_ref=input_vtk_ref,
-                                       num_time_steps=num_time_steps)
+                                       num_time_steps=num_time_steps,
+                                       output_file_id=sample_name)
 
     tubulaton_file_name = f"{config_dict['nom_output_vtk']}{config_dict['nb_max_steps']}.vtk"
     config_file_path = os.path.join(exec_dir, "config.ini")
 
     os.makedirs(tubulaton_dir, exist_ok=True)
-
     save_config_to_ini(config_dict, config_file_path)
-    
-    os.chdir(exec_dir)
-    result = subprocess.run([f'./{exec_file_name}', config_file_path], 
-                            capture_output=True, 
-                            text=True)
-    if result.stderr:
-        raise RuntimeError(f"Tubulaton error:\n{result.stderr}")
 
-    shutil.move(os.path.join(tubulaton_dir, tubulaton_file_name), 
-                os.path.join(output_dir, output_file_name))
-    shutil.rmtree(tubulaton_dir)
-    
-#Test: Check /Users/karan/Microtubules/Data/Tubulaton-Debug/tubulaton_raw.vtk
-# if __name__ == '__main__':
-#     print("Creating tubulaton vtk output...")
-#     save_tubulaton_vtk(exec_dir="/Users/karan/Microtubules/tubulaton/bin",
-#                        exec_file_name='program',
-#                        output_dir='/Users/karan/Microtubules/Data/Tubulaton-Debug')
-#     print("Saved to file!")
+    tubulaton_file_path = os.path.join(tubulaton_dir, tubulaton_file_name)
+    return tubulaton_file_path
+
+
+if __name__ == '__main__':
+    print("CL args for config_setup.py:")
+    print(sys.argv)
+    print('\n\n')
+
+    exec_dir = sys.argv[1]
+    input_mesh_dir = sys.argv[2]
+    output_dir = sys.argv[3]
+    time_steps = sys.argv[4]
+    sample_name = sys.argv[5]
+
+    tubulaton_file_path = generate_config(exec_dir=exec_dir,
+                                          output_dir=output_dir,
+                                          default_config_dict=default_config_dict,
+                                          input_mesh_dir=input_mesh_dir,
+                                          num_time_steps=time_steps,
+                                          sample_name=sample_name)
+
+    with open(f'tubulaton_file_path_{sample_name}.txt', 'w') as file:
+        file.write(tubulaton_file_path)

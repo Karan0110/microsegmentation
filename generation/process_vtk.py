@@ -1,7 +1,4 @@
 # Command line arguments
-# exec_dir       : Path to bin folder for tubulaton
-# exec_file_name : Name of tubulaton executable (should be programme)
-# input_mesh_dir : Location of folder containing .vtk meshes for membrane/nucleus
 # output_dir     : Location to save data
 # sample_name    : A unique ID for the data sample
 
@@ -12,46 +9,35 @@ import time
 
 from PIL import Image
 
-from tubulaton_interface import save_tubulaton_vtk
 from vtk_projection import get_2d_projection_from_vtk
 from process_projection import process_projection
-from tubulaton_config import default_config_dict
 
 VERBOSE = True
-TIME_STEPS = 1000
 
 if __name__ == '__main__':
     start_time = time.time()
 
-    exec_dir = sys.argv[1]
-    exec_file_name = sys.argv[2]
-    input_mesh_dir = sys.argv[3]
-    output_dir = sys.argv[4]
-    sample_name = sys.argv[5]
+    if VERBOSE:
+        print("\n\n")
 
-    #This can be anything - just make sure it is consistent between save_tubulaton_vtk and get_2d_projection_from_vtk
-    vtk_file_name = 'tubulaton_raw.vtk'
+    output_dir = sys.argv[1]
+    sample_name = sys.argv[2]
 
-    save_tubulaton_vtk(exec_dir=exec_dir,
-                       exec_file_name=exec_file_name,
-                       input_mesh_dir=input_mesh_dir,
-                       output_dir=output_dir,
-                       output_file_name=vtk_file_name,
-                       default_config_dict=default_config_dict,
-                       num_time_steps=TIME_STEPS,
-                       verbose=VERBOSE)
+    # After tubulaton has been run by a shell script:
 
+    tubulaton_file_path = None
+    with open(f'tubulaton_file_path_{sample_name}.txt', 'r') as file:
+        tubulaton_file_path = file.read()
 
-    image = get_2d_projection_from_vtk(vtk_file_path=os.path.join(output_dir, vtk_file_name),
-                                                verbose=VERBOSE)
-    print(image.shape)
+    image = get_2d_projection_from_vtk(vtk_file_path=tubulaton_file_path,
+                                       verbose=VERBOSE)
 
-
-    noised_control_image, noised_depoly_image = process_projection(control_image=image)
-        
+    noised_control_image, noised_depoly_image = process_projection(control_image=image, 
+                                                                   verbose=VERBOSE)
 
     if VERBOSE:
         print("Converting np array to PIL.Image...")
+
     noised_control_image = Image.fromarray((noised_control_image * 255.).astype(np.uint8), mode='L')
     noised_depoly_image = Image.fromarray((noised_depoly_image * 255.).astype(np.uint8), mode='L')
 

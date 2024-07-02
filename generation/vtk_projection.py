@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,7 +29,7 @@ def project_points_to_xz_plane(polydata : vtkPolyData) -> np.array:
 
 def create_image_from_points(points: np.array,
                              image_height : int = 256 - 50 * 2,
-                             image_width : int | None = None,
+                             image_width : Union[int, None] = None,
                              point_size : int = 6,
                              verbose : bool = False):
     x_min, x_max = np.min(points[:, 0]) - point_size, np.max(points[:, 0]) + point_size
