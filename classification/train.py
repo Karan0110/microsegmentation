@@ -68,8 +68,9 @@ if __name__ == '__main__':
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict(),
         'scheduler': scheduler.state_dict(),
-
         'epoch': num_epochs,
+        'patch_size': patch_size,
+
         'model_params': {
             'layers': layers,
             'in_channels': in_channels,

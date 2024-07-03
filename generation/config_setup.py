@@ -1,5 +1,5 @@
 # Command line arguments
-# exec_dir       : Path to bin folder for tubulaton
+# tubulaton_dir  : Path to tubulaton folder 
 # input_mesh_dir : Location of folder containing .vtk meshes for membrane/nucleus
 # output_dir     : Location to save data
 # time_steps     : Number of time steps to simulate
@@ -7,21 +7,20 @@
 
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
 from tubulaton_config import default_config_dict
 
-VERBOSE = True
-
-def save_config_to_ini(config_dict : dict, file_path : str) -> None:
+def save_config_to_ini(config_dict : dict, file_path : Path) -> None:
     with open(file_path, 'w') as file:
         for key, value in config_dict.items():
             file.write(f"{key}={value}\n")
 
 def generate_config_dict(default_config_dict : dict,
-                         tubulaton_dir : str,
-                         input_mesh_dir : str,
+                         tubulaton_output_dir : Path,
+                         input_mesh_dir : Path,
                          input_vtk_1 : str,
                          input_vtk_2 : str,
                          input_vtk_ref : str,
@@ -29,13 +28,15 @@ def generate_config_dict(default_config_dict : dict,
                          output_file_id : str) -> dict:
     config_dict = default_config_dict.copy()
 
-    config_dict['nom_folder_output_vtk'] = tubulaton_dir
-    config_dict['nom_folder_input_vtk'] = input_mesh_dir
+    #TODO Refactor tubulaton to not require the dir path ending in /
+    config_dict['nom_folder_output_vtk'] = str(tubulaton_output_dir) + '/'
+    config_dict['nom_folder_input_vtk'] = str(input_mesh_dir) + '/'
+
     config_dict['nom_input_vtk'] = input_vtk_1
     config_dict['nom_input_vtk_2'] = input_vtk_2
     config_dict['nom_input_vtk_ref'] = input_vtk_ref
     config_dict['nom_input_vtk_ref_2'] = input_vtk_ref
-    config_dict['nom_output_vtk'] = output_file_id
+    config_dict['nom_output_vtk'] = f"tubulaton-{output_file_id}_"
 
     config_dict['vtk_steps'] = str(num_time_steps)
     config_dict['nb_max_steps'] = str(num_time_steps)
@@ -74,20 +75,20 @@ def generate_config_dict(default_config_dict : dict,
     
     return config_dict
     
-def generate_config(exec_dir : str, 
-                    output_dir : str,
+def generate_config(tubulaton_dir : Path, 
+                    output_dir : Path,
+                    input_mesh_dir : Path,
                     default_config_dict : dict,
-                    input_mesh_dir : str,
                     num_time_steps : int,
                     sample_name : str,
                     input_vtk_1 : str = "Cylinder_10000_EqualNucleation.vtk",
                     input_vtk_2 : str = "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
                     input_vtk_ref : str = "Cylinder_10000_EqualNucleation.vtk") -> None:
     
-    tubulaton_dir = os.path.join(output_dir, "tubulaton-run/")
+    tubulaton_output_dir = output_dir / 'tubulaton-run'
 
     config_dict = generate_config_dict(default_config_dict=default_config_dict,
-                                       tubulaton_dir=tubulaton_dir,
+                                       tubulaton_output_dir=tubulaton_output_dir,
                                        input_mesh_dir=input_mesh_dir,
                                        input_vtk_1=input_vtk_1,
                                        input_vtk_2=input_vtk_2,
@@ -95,33 +96,22 @@ def generate_config(exec_dir : str,
                                        num_time_steps=num_time_steps,
                                        output_file_id=sample_name)
 
-    tubulaton_file_name = f"{config_dict['nom_output_vtk']}{config_dict['nb_max_steps']}.vtk"
-    config_file_path = os.path.join(exec_dir, "config.ini")
+    config_file_path = tubulaton_dir / f"init/config-{sample_name}.ini"
 
-    os.makedirs(tubulaton_dir, exist_ok=True)
+    os.makedirs(tubulaton_output_dir, exist_ok=True)
+
     save_config_to_ini(config_dict, config_file_path)
 
-    tubulaton_file_path = os.path.join(tubulaton_dir, tubulaton_file_name)
-    return tubulaton_file_path
-
-
 if __name__ == '__main__':
-    print("CL args for config_setup.py:")
-    print(sys.argv)
-    print('\n\n')
-
-    exec_dir = sys.argv[1]
-    input_mesh_dir = sys.argv[2]
-    output_dir = sys.argv[3]
-    time_steps = sys.argv[4]
+    tubulaton_dir = Path(sys.argv[1])
+    input_mesh_dir = Path(sys.argv[2])
+    output_dir = Path(sys.argv[3])
+    time_steps = int(sys.argv[4])
     sample_name = sys.argv[5]
 
-    tubulaton_file_path = generate_config(exec_dir=exec_dir,
-                                          output_dir=output_dir,
-                                          default_config_dict=default_config_dict,
-                                          input_mesh_dir=input_mesh_dir,
-                                          num_time_steps=time_steps,
-                                          sample_name=sample_name)
-
-    with open(f'tubulaton_file_path_{sample_name}.txt', 'w') as file:
-        file.write(tubulaton_file_path)
+    generate_config(tubulaton_dir=tubulaton_dir,
+                    output_dir=output_dir,
+                    default_config_dict=default_config_dict,
+                    input_mesh_dir=input_mesh_dir,
+                    num_time_steps=time_steps,
+                    sample_name=sample_name)

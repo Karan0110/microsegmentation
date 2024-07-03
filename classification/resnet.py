@@ -4,9 +4,12 @@ from resnet_block import ResNetBlock
 
 # Can only process input image size multiple of (32, 32)
 class ResNet(nn.Module):
-    def __init__(self, layers, in_channels=1, num_classes=2) -> None:
+    def __init__(self, 
+                 layers : list, 
+                 in_channels : int = 1, 
+                 num_classes : int = 2) -> None:
         if len(layers) != 4:
-            raise ValueError(f"ResNet only supports 4 layers, not the provided layer list {layers} of length {len(layers)}")
+            raise ValueError(f"ResNet only supports exactly 4 layers, not the provided layer list {layers} of length {len(layers)}")
             
         super().__init__()
         self.in_channels = in_channels

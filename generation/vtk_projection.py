@@ -1,22 +1,23 @@
 from typing import Tuple, Union
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-import vtk
+from vtkmodules.vtkIOLegacy import vtkPolyDataReader
 from vtkmodules.vtkCommonDataModel import vtkPolyData
 
 from tqdm import tqdm
 
-def read_vtk_file(file_path : str) -> vtkPolyData:
-    reader = vtk.vtkPolyDataReader()
-    reader.SetFileName(file_path)
+def read_vtk_file(file_path : Path) -> vtkPolyData:
+    reader = vtkPolyDataReader()
+    reader.SetFileName(str(file_path))
     reader.Update()
 
     return reader.GetOutput()
 
-def project_points_to_xz_plane(polydata : vtkPolyData) -> np.array:
+def project_points_to_xz_plane(polydata : vtkPolyData) -> np.ndarray:
     points = polydata.GetPoints()
     num_points = points.GetNumberOfPoints()
     projected_points = np.zeros((num_points, 2))
@@ -27,7 +28,7 @@ def project_points_to_xz_plane(polydata : vtkPolyData) -> np.array:
     
     return projected_points
 
-def create_image_from_points(points: np.array,
+def create_image_from_points(points: np.ndarray,
                              image_height : int = 256 - 50 * 2,
                              image_width : Union[int, None] = None,
                              point_size : int = 6,
@@ -64,8 +65,8 @@ def create_image_from_points(points: np.array,
     return image
 
 #Returns np array of image with intensities in [0,1]
-def get_2d_projection_from_vtk(vtk_file_path : str, 
-                               verbose : bool = False) -> np.array:
+def get_2d_projection_from_vtk(vtk_file_path : Path, 
+                               verbose : bool = False) -> np.ndarray:
     if verbose:
         print("Projecting vtk data to 2d numpy array...")
 
