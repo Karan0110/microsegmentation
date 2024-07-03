@@ -31,7 +31,7 @@ def project_points_to_xz_plane(polydata : vtkPolyData) -> np.ndarray:
 def create_image_from_points(points: np.ndarray,
                              image_height : int = 256 - 50 * 2,
                              image_width : Union[int, None] = None,
-                             point_size : int = 6,
+                             point_size : int = 2,
                              verbose : bool = False):
     x_min, x_max = np.min(points[:, 0]) - point_size, np.max(points[:, 0]) + point_size
     z_min, z_max = np.min(points[:, 1]) - point_size, np.max(points[:, 1]) + point_size

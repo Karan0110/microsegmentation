@@ -13,8 +13,8 @@ RED_CHANNEL = 0
 GREEN_CHANNEL = 1
 BLUE_CHANNEL = 2
 
-def pad_image(image : np.array, 
-              padding : int) -> np.array:
+def pad_image(image : np.ndarray, 
+              padding : int) -> np.ndarray:
 
     height, width = image.shape
     padded_image = np.zeros((height + 2 * padding, width + 2 * padding))
@@ -24,8 +24,8 @@ def pad_image(image : np.array,
     return padded_image
 
 #Rescale image intensities to use upper end more (lossy)
-def rescale_image_intensities(image : np.array, 
-                  percentile : float) -> np.array:
+def rescale_image_intensities(image : np.ndarray, 
+                  percentile : float) -> np.ndarray:
     image = image.astype(np.float32)
 
     perc_value = np.percentile(image, percentile)
@@ -35,8 +35,8 @@ def rescale_image_intensities(image : np.array,
     return rescaled_image
 
 #Discretize array by breaking into a grid of quant_size x quant_size and assiging to each tile the average value
-def discretize_array(array : np.array, 
-                     quant_size : int) -> np.array:
+def discretize_array(array : np.ndarray, 
+                     quant_size : int) -> np.ndarray:
     h, w = array.shape
     
     h_tiles = h // quant_size
@@ -55,7 +55,7 @@ def discretize_array(array : np.array,
     return discretized_array
 
 #Gets bounding box of MT network
-def get_bounding_box(image : np.array) -> Tuple[int, int, int, int]:
+def get_bounding_box(image : np.ndarray) -> Tuple[int, int, int, int]:
     non_zero_indices = np.argwhere(image)
     min_i, min_j = non_zero_indices.min(axis=0)
     max_i, max_j = non_zero_indices.max(axis=0)
@@ -63,9 +63,9 @@ def get_bounding_box(image : np.array) -> Tuple[int, int, int, int]:
     return (min_i, min_j, max_i, max_j)
 
 #Simulate depolymerisation (run this before adding noise)
-def simulate_depoly(image : np.array, 
-                    blackout_intensity : int = 0.05,
-                    blackout_size: int = 4,) -> np.array:
+def simulate_depoly(image : np.ndarray, 
+                    blackout_intensity : float = 0.05,
+                    blackout_size: int = 4,) -> np.ndarray:
     depoly_image = image.copy()
     
     height, width = image.shape
@@ -80,16 +80,16 @@ def simulate_depoly(image : np.array,
     return depoly_image
     
 # Add noise to an image (must already be cropped) 
-def add_noise(image : np.array, 
+def add_noise(image : np.ndarray, 
               min_i : int, 
               min_j : int, 
               max_i : int, 
               max_j : int, 
               apply_gaussian_blur : bool = True, 
-              grain_size : int = 6, 
+              grain_size : int = 3, 
               noise_level : float = 0.05, 
               exp_scale : float = 0.85, 
-              intensity_quantile : float = .98) -> np.array:
+              intensity_quantile : float = .98) -> np.ndarray:
 
     noised_image = image.copy()
     height, width = noised_image.shape
@@ -123,9 +123,9 @@ def add_noise(image : np.array,
     
     return noised_image
 
-def process_projection(control_image : np.array, 
+def process_projection(control_image : np.ndarray, 
                        padding : int = 50,
-                       verbose : bool = False) -> Tuple[np.array, np.array]:
+                       verbose : bool = False) -> Tuple[np.ndarray, np.ndarray]:
     if verbose:
         print("Processing image...")
 

@@ -1,6 +1,7 @@
 # Command line arguments
-# output_dir          : Location to save data
-# sample_name         : A unique ID for the data sample
+# output_dir                 : Location to save data
+# sample_name                : A unique ID for the data sample
+# tubulaton_output_file_path : Path of tubulaton .vtk output file
 
 import os
 import sys
@@ -20,10 +21,7 @@ if __name__ == '__main__':
 
     output_dir = Path(sys.argv[1])
     sample_name = sys.argv[2]
-
-    tubulaton_output_dir = output_dir / 'tubulaton-run/'
-    tubulaton_output_file_name = f"tubulaton-{sample_name}.vtk"
-    tubulaton_output_file_path = tubulaton_output_dir / tubulaton_output_file_name
+    tubulaton_output_file_path = Path(sys.argv[3])
 
     image = get_2d_projection_from_vtk(vtk_file_path=tubulaton_output_file_path,
                                        verbose=VERBOSE)
