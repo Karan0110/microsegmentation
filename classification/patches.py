@@ -12,6 +12,10 @@ import torchvision.transforms as transforms
 
 from resnet import ResNet
 
+#Returns tensor of shape (num_patches, channels, height, width)
+#The patches are ordered lexicographically, e.g.
+# 0 1 2
+# 3 4 5
 def get_image_patches(image : Tensor, 
                       patch_size : Tuple[int,int]) -> Tensor:
     # batch, channels, height, width
@@ -45,7 +49,10 @@ def get_patch_probabilities(image: np.ndarray,
         transforms.ToTensor()
     ])
     # Add batch dimension
-    image_tensor : Tensor = torch.tensor(transform(image))
+    transformed_image  = transform(image)
+    if not isinstance(transformed_image, Tensor):
+        raise ValueError('The transform of the image is not a Tensor')
+    image_tensor : Tensor = transformed_image.clone().detach()
     image_tensor = image_tensor.unsqueeze(0) 
     _, _, height, width = image_tensor.shape
 

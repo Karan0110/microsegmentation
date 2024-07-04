@@ -20,11 +20,8 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
     dataset_dir = Path(sys.argv[1])
-    save_file_dir = Path(sys.argv[2])
-    save_file_name = f"{sys.argv[3]}.pth"
-    patch_size = int(sys.argv[4])
-
-    save_file_path = save_file_dir / save_file_name
+    save_file_path = Path(sys.argv[2])
+    patch_size = int(sys.argv[3])
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU
     device = (
@@ -43,7 +40,7 @@ if __name__ == '__main__':
     # Initialize model, loss function, optimizer, and scheduler
     layers = [2,2,2,2]
     in_channels = 1
-    num_classes=2
+    num_classes = 2
 
     model = ResNet(layers=layers, in_channels=in_channels, num_classes=num_classes).to(device)
 
@@ -69,15 +66,16 @@ if __name__ == '__main__':
         'optimizer': optimizer.state_dict(),
         'scheduler': scheduler.state_dict(),
         'epoch': num_epochs,
-        'patch_size': patch_size,
 
         'model_params': {
+            'patch_size': patch_size,
             'layers': layers,
             'in_channels': in_channels,
-            'num_clases': num_classes,
+            'num_classes': num_classes,
         }
     }
 
     torch.save(model_state,
-            f=os.path.join(save_file_path))
+               f=save_file_path)
+
     print(f"Saved model to {save_file_path}.")

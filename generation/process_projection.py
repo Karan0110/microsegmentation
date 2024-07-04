@@ -66,6 +66,9 @@ def get_bounding_box(image : np.ndarray) -> Tuple[int, int, int, int]:
 def simulate_depoly(image : np.ndarray, 
                     blackout_intensity : float = 0.05,
                     blackout_size: int = 4,) -> np.ndarray:
+
+    orig_total_intensity = image.sum() 
+
     depoly_image = image.copy()
     
     height, width = image.shape
@@ -74,8 +77,17 @@ def simulate_depoly(image : np.ndarray,
     num_blackouts = np.random.poisson(lam=rate)
 
     for _ in range(num_blackouts):
-        i,j = (np.random.randint(height) - blackout_size + 1, np.random.randint(width) - blackout_size + 1)
+        i,j = (np.random.randint(height - blackout_size + 1), np.random.randint(width - blackout_size + 1))
+
+        mean_intensity = depoly_image[i:i+blackout_size, j:j+blackout_size].mean()
         depoly_image[i:i+blackout_size, j:j+blackout_size] = 0.
+
+        new_i = i + np.random.randint(-5, 5)
+        new_j = j + np.random.randint(-5, 5)
+        new_i = np.clip(new_i, 0, height - blackout_size)
+        new_j = np.clip(new_j, 0, width - blackout_size)
+
+        depoly_image[new_i:new_i+blackout_size, new_j:new_j+blackout_size] += mean_intensity
 
     return depoly_image
     
