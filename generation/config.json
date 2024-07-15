@@ -1,0 +1,23 @@
+{
+    "_comment_num_fluorophores": "TODO - remove this and actually work from physical values about concentration and volumes",
+    "num_fluorophores": 5e6,
+
+    "tubulaton_unit_in_meters": 8e-9,
+
+    "fluorophore_concentration": 1e-3,
+    "fluorophore_displacement_std": 20.0,
+
+    "z_slice_range": 2e-6,
+    "psf_kernel_size": 35,
+    "peak_intensity": 5.0,
+    "numerical_aperature": 1.40,
+    "emission_wavelength": 527e-9,
+
+    "dark_electron_emission": 0.0,
+    "pixel_area": "TODO",
+    "exposure_time": "TODO",
+
+    "_comment_eem": "Replace with actual computation using MS params",
+    "electron_emission_multiplier": 1.0,
+    "digital_gain": 1.0
+}

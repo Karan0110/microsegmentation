@@ -9,10 +9,6 @@ import cv2
 from PIL import Image
 from scipy.ndimage import gaussian_filter
 
-RED_CHANNEL = 0
-GREEN_CHANNEL = 1
-BLUE_CHANNEL = 2
-
 def pad_image(image : np.ndarray, 
               padding : int) -> np.ndarray:
 
