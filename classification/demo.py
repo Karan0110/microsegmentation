@@ -25,7 +25,7 @@ def draw_patches(ax : Axes,
                  width_in_patches : int,
                  patch_size : int,
                  alpha : float = 1.) -> None:
-    ax.axis('off')
+    
     for i in range(height_in_patches):
         for j in range(width_in_patches):
             index = 4*i + j
@@ -36,9 +36,10 @@ def draw_patches(ax : Axes,
             color = matplotlib.colormaps.get_cmap('inferno')(probability) # type: ignore 
             color_with_alpha = color[:3] + (alpha,)
             square = Rectangle((j * patch_size, i * patch_size), patch_size, patch_size, 
-                                   facecolor=color_with_alpha, edgecolor='none')
+                                   facecolor=color_with_alpha, edgecolor='green')
 
             ax.add_patch(square)
+
 
 def plot_demo(detailed : bool,
               image : np.ndarray,
@@ -62,6 +63,7 @@ def plot_demo(detailed : bool,
 
     # Draw image with probabilities overlaid
     axs[row,0].imshow(image, cmap='gray')
+    axs[row,0].axis('off')
     draw_patches(probabilities=probabilities.tolist(),
                  ax=axs[row,0],
                  width_in_patches=width_in_patches,
@@ -71,6 +73,9 @@ def plot_demo(detailed : bool,
 
     # Draw probabilities on their own
     axs[row,1].axis('off')
+    axs[row,1].set_xlim(0, width_in_patches * patch_size)
+    axs[row,1].set_ylim(height_in_patches * patch_size, 0)
+
     draw_patches(probabilities=probabilities.tolist(),
                  ax=axs[row,1],
                  width_in_patches=width_in_patches,

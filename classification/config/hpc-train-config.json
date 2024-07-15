@@ -1,0 +1,39 @@
+{
+    "dataset_dir": "/rds/users/ke330/SimulatedData",
+    "save_file_dir": "/rds/users/ke330/Models",
+    "patch_size": 128,
+    "num_epochs": 30,
+
+    "model": {
+        "layers": [3, 4, 23, 3],
+        "in_channels": 1,
+        "num_classes": 2
+    },
+
+    "optimizer": {
+        "lr": 1e-4,
+        "momentum": 0.9,
+        "weight_decay": 5e-4
+    },
+
+    "scheduler": {
+        "step_size": 30, 
+        "gamma": 0.1
+    },
+
+    "transforms": [
+        {
+        "type": "ElasticTransform",
+        "alpha": 50.0,
+        "sigma": 5.0
+        },
+        {
+        "type": "RandomHorizontalFlip",
+        "p": 0.5
+        },
+        {
+        "type": "RandomRotation",
+        "degrees": 10
+        }
+    ]
+}

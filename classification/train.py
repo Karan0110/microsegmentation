@@ -7,6 +7,8 @@
 import os
 import sys
 from pathlib import Path
+from pprint import pprint
+import json
 
 import torch
 import torch.nn as nn
@@ -14,14 +16,31 @@ import torch.optim as optim
 
 from resnet import ResNet
 from epoch import train_model, test_model
-from tubulaton_dataloader import get_data_loaders
+from tubulaton_dataset import get_data_loaders
 
 from tqdm import tqdm
 
 if __name__ == '__main__':
-    dataset_dir = Path(sys.argv[1])
-    save_file_path = Path(sys.argv[2])
-    patch_size = int(sys.argv[3])
+    if len(sys.argv) not in [2,3]:
+        print("Too few / many command-line arguments!")
+        print("Correct usage of program:")
+        print(f"python3 {sys.argv[0]} [config_file_path] <save_file_name>")
+        print("Where default name for model save file is \"model\"")
+        exit(1)
+
+    config_file_path = Path(sys.argv[1])
+    save_file_name = sys.argv[2] if len(sys.argv) >= 3 else "model"
+
+    with config_file_path.open('r') as file:
+        config = json.load(file)
+
+    dataset_dir = Path(config['dataset_dir'])
+    save_file_dir = Path(config['save_file_dir'])
+    os.makedirs(save_file_dir, exist_ok=True)
+
+    save_file_path = save_file_dir / f"{save_file_name}.pth"
+
+    patch_size = config['patch_size']
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU
     device = (
@@ -34,31 +53,37 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # Data
+    transform_config = config['transforms']
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
-                                                 base_dir=dataset_dir)
+                                                 base_dir=dataset_dir,
+                                                 transform_config=transform_config)
 
     # Initialize model, loss function, optimizer, and scheduler
-    layers = [2,2,2,2]
-    in_channels = 1
-    num_classes = 2
+    model_config = config['model']
+    layers = model_config['layers']
+    in_channels = model_config['in_channels']
+    num_classes = model_config['num_classes']
 
     model = ResNet(layers=layers, in_channels=in_channels, num_classes=num_classes).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=1e-4, momentum=0.9, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+
+    optimizer_config = config['optimizer']
+    optimizer = optim.SGD(model.parameters(), **optimizer_config)
+
+    scheduler_config = config['scheduler']
+    scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
     # Training and testing loop
-    num_epochs = 30
+    num_epochs = config['num_epochs']
 
-    with tqdm(total=num_epochs, ncols=100) as pbar:
-        for epoch in range(num_epochs):
-            train_model(model, device, train_loader, criterion, optimizer, epoch)
-            pbar_ordered_dict = test_model(model, device, test_loader, criterion)
-            scheduler.step()
-            
-            pbar.update(1)
-            pbar.set_postfix(ordered_dict=pbar_ordered_dict)
+    for epoch in range(num_epochs):
+        train_model(model, device, train_loader, criterion, optimizer, epoch)
+        progress_report = test_model(model, device, test_loader, criterion)
+        scheduler.step()
+
+        for key in progress_report:
+            print(f"{key}: {progress_report[key]}")
             
     #Save the model to file
     model_state = {

@@ -1,6 +1,14 @@
 import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, Dataset
+from torch.optim import Optimizer
 
-def train_model(model, device, train_loader, criterion, optimizer, epoch) -> None:
+def train_model(model : nn.Module, 
+                device : str, 
+                train_loader : DataLoader, 
+                criterion : nn.Module,  
+                optimizer : Optimizer, 
+                epoch : int) -> None:
     model.to(device)
     model.train()
     running_loss = 0.0
@@ -17,7 +25,11 @@ def train_model(model, device, train_loader, criterion, optimizer, epoch) -> Non
         running_loss += loss.item()
 
 
-def test_model(model, device, test_loader, criterion, verbose=False):
+def test_model(model : nn.Module, 
+               device : str, 
+               test_loader : DataLoader, 
+               criterion : nn.Module, 
+               verbose : bool = False) -> dict:
     model.eval()
     test_loss = 0.0
     correct = 0

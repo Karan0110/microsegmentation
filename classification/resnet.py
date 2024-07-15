@@ -14,6 +14,8 @@ class ResNet(nn.Module):
         super().__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
+
+        self.dropout_layers = [nn.Dropout(p=0.5) for _ in range(9)]
         
         self.conv1 = nn.Conv2d(in_channels=in_channels, 
                                out_channels=64,
@@ -76,16 +78,25 @@ class ResNet(nn.Module):
             raise ValueError(f"ResNet can only process images whose dimensions are divisible by 32, not {W} x {H}. \n Full Input shape: {tuple(x.shape)}")
         
         x = self.conv1(x)
+        x = self.dropout_layers[0](x)
         x = self.pool1(x)
+        x = self.dropout_layers[1](x)
         x = self.relu1(x)
+        x = self.dropout_layers[2](x)
 
         x = self.layer1(x)
+        x = self.dropout_layers[3](x)
         x = self.layer2(x)
+        x = self.dropout_layers[4](x)
         x = self.layer3(x)
+        x = self.dropout_layers[5](x)
         x = self.layer4(x)
+        x = self.dropout_layers[6](x)
         
         x = self.avg_pool(x)
+        x = self.dropout_layers[7](x)
         x = self.lin(x)
+        x = self.dropout_layers[8](x)
         
         return x
         

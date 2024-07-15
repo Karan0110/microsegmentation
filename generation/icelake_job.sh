@@ -58,9 +58,9 @@ module load rhel8/default-icl              # REQUIRED - loads the basic environm
 #! Insert additional module load commands after this line if needed:
 
 module load vtk/7.1.1
-source /rds/user/ke330/hpc-work/hpc-env/bin/activate
 
 #! Full path to application executable: 
+source /rds/user/ke330/hpc-work/hpc-env/bin/activate
 application="/rds/user/ke330/hpc-work/generation/generate.sh"
 
 #! Run options for the application:
