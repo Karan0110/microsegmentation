@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 from pprint import pprint
-import json
+import json5
 
 import torch
 import torch.nn as nn
@@ -32,7 +32,10 @@ if __name__ == '__main__':
     save_file_name = sys.argv[2] if len(sys.argv) >= 3 else "model"
 
     with config_file_path.open('r') as file:
-        config = json.load(file)
+        config = json5.load(file)
+
+    if not isinstance(config, dict):
+        raise TypeError("JSON5 config file is of invalid format! It should be a dictionary")
 
     dataset_dir = Path(config['dataset_dir'])
     save_file_dir = Path(config['save_file_dir'])
