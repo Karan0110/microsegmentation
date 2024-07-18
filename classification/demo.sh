@@ -11,5 +11,3 @@ python3 demo.py default /Users/karan/MTData/ExperimentalIndividualImages/Control
 
 echo "Real-World Depoly"
 python3 demo.py default /Users/karan/MTData/ExperimentalIndividualImages/Depolymerised 6
-
-

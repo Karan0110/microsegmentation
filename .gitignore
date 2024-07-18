@@ -2,3 +2,4 @@ __pycache__/
 Misc/
 .ipynb_checkpoints/
 .DS_Store
+.vscode/

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import scipy
+import scipy.signal
 
 from PIL import Image
 
@@ -154,7 +155,6 @@ if __name__ == '__main__':
     time_taken = time.time() - start_time
     if VERBOSE:
         print(f"Took {time_taken:.2f} seconds.")
-
 
 # output_dir :            /Users/karan/MTData/Test_Output
 # tubulaton_output_path : /Users/karan/MTData/tubulaton-run

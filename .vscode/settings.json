@@ -1,8 +1,0 @@
-{
-  "python.pythonPath": "/Users/karan/anaconda3/bin/python3"
-  "python.analysis.extraPaths": [
-	"/Users/karan/anaconda3/lib/python3.11/site-packages"
-  ],
-  "python.analysis.useLibraryCodeForTypes": true
-}
-
