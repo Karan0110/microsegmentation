@@ -49,7 +49,7 @@ def calculate_fluorophore_emission_per_second(config : dict) -> float:
 
     return intensity
 
-def get_fluorophore_points(mt_points : np.ndarray,
+def get_fluorophore_points(tubulin_points : np.ndarray,
                            config : dict) -> np.ndarray:
     tubulaton_unit_in_meters: float = config['tubulaton_unit_in_meters']
     # num_fluorophores : int = config['num_fluorophores']
@@ -59,19 +59,14 @@ def get_fluorophore_points(mt_points : np.ndarray,
     fluorophore_concentration : float = fluorophore_config['concentration']
 
     #How many fluorophores are there?
-    # TODO - actually use this!!!
-    x_dim = mt_points[:, 0].max() - mt_points[:, 0].min()
-    y_dim = mt_points[:, 1].max() - mt_points[:, 1].min()
-    z_dim = mt_points[:, 2].max() - mt_points[:, 2].min()
+    x_dim = tubulin_points[:, 0].max() - tubulin_points[:, 0].min()
+    y_dim = tubulin_points[:, 1].max() - tubulin_points[:, 1].min()
+    z_dim = tubulin_points[:, 2].max() - tubulin_points[:, 2].min()
 
     volume = x_dim * y_dim * z_dim * (tubulaton_unit_in_meters ** 3)
     fluorophores_in_moles = volume * (fluorophore_concentration * (10**3))
-    print(f"Theoretical number of FPs: {fluorophores_in_moles * 6.0e23}")
+    print(f"Number of FPs: {fluorophores_in_moles * 6.0e23}")
 
-    # TODO - we haven't actually used calculated number of FPs (It could be tractable though - I initially thought it was on order 10^20, actually more like 10^8)
-    # Just used a preset config value
-
-    # num_fluorophores = int(config['num_fluorophores'])
     fluorophore_batch_size = config['fluorophore_batch_size']
     num_fluorophores = int(fluorophores_in_moles * 6.0e23 / fluorophore_batch_size)
 
@@ -81,16 +76,15 @@ def get_fluorophore_points(mt_points : np.ndarray,
     # Sample or choice? (currently using choice)
 
     # Using sample
-    if num_fluorophores >= mt_points.shape[0]:
-        fluorophore_indices = list(range(mt_points.shape[0]))
+    if num_fluorophores >= tubulin_points.shape[0]:
+        fluorophore_indices = list(range(tubulin_points.shape[0]))
     else:
-        fluorophore_indices = random.sample(range(mt_points.shape[0]), k=num_fluorophores)
+        fluorophore_indices = random.sample(range(tubulin_points.shape[0]), k=num_fluorophores)
 
     # Using choice
     # fluorophore_indices = random.choices(range(mt_points.shape[0]), k=num_fluorophores)
 
-    fluorophore_points = mt_points[fluorophore_indices]
-
+    fluorophore_points = tubulin_points[fluorophore_indices].copy()
     displacement = np.random.normal(loc=0., 
                                     scale=fluorophore_displacement_std/np.sqrt(3), 
                                     size=fluorophore_points.shape)
@@ -101,6 +95,7 @@ def get_fluorophore_points(mt_points : np.ndarray,
 def get_fluorophore_image(fluorophore_points : np.ndarray,
                           z_slice : float,
                           config : dict,
+                          bounding_box : Tuple[int, int, int, int],
                           verbose : bool = True) -> np.ndarray:
 
     # TODO - we destroy z-axis information here, without accounting for the different PSF
@@ -109,12 +104,9 @@ def get_fluorophore_image(fluorophore_points : np.ndarray,
     fluorophore_batch_size = config['fluorophore_batch_size']
     fluorophore_batch_spread = config['fluorophore_batch_spread']
 
-    x_min = fluorophore_points[:, 0].min()
-    x_max = fluorophore_points[:, 0].max()
-    y_min = fluorophore_points[:, 1].min()
-    y_max = fluorophore_points[:, 1].max()
+    x_min, y_min, x_max, y_max = bounding_box
 
-    original_image = np.zeros((int(y_max - y_min) + 1, int(x_max - x_min) + 1))
+    image = np.zeros((int(y_max - y_min) + 1, int(x_max - x_min) + 1))
     
     hits = 0
     for fluorophore_point in fluorophore_points:
@@ -124,8 +116,10 @@ def get_fluorophore_image(fluorophore_points : np.ndarray,
             new_x = int(x - x_min)
             new_y = int(y - y_min)
             
-            original_image[new_y:new_y+fluorophore_batch_spread, new_x:new_x+fluorophore_batch_spread] = float(fluorophore_batch_size) / (fluorophore_batch_spread ** 2)
+            temp_y = min(new_y+fluorophore_batch_spread, int(y_max - y_min))
+            temp_x = min(new_x+fluorophore_batch_spread, int(x_max - x_min))
+            image[new_y:temp_y, new_x:temp_x] = float(fluorophore_batch_size) / (fluorophore_batch_spread ** 2)
     if verbose:
         print(f"{hits} fluorophores found in the focal plane.")
 
-    return original_image
+    return image

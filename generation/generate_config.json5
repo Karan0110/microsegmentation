@@ -1,11 +1,10 @@
 {
-    //TODO - not actually performed IRL
-    "adjust_contrast_quantile": 0.99,
-
     "tubulaton_unit_in_meters": 8e-9,
 
     "fluorophore_batch_size": 50000,
     "fluorophore_batch_spread": 4,
+
+    "mt_label_point_radius": 5,
 
     "microscope": {
         "numerical_aperature": 1.40,

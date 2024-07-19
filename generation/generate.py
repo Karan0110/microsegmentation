@@ -9,7 +9,7 @@ import json5
 import time
 import random
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import numpy as np
 import scipy
@@ -19,38 +19,83 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 from fluorophore_simulation import get_mt_points, get_fluorophore_points, get_fluorophore_image, calculate_fluorophore_emission_per_second
-from microscope_simulation import get_psf_kernel, get_digital_signal, adjust_contrast, quantize_intensities
+from microscope_simulation import get_psf_kernel, get_digital_signal, quantize_intensities
 from depoly_simulation import simulate_depoly
+from labelling import get_label
 
 from visualize import visualize
 
 VERBOSE = True
-DEMO_MODE = True
+DEMO_MODE = False
 
-def generate_from_mt_points(mt_points : np.ndarray,
-                            config : dict,
-                            verbose : bool) -> np.ndarray:
+def generate(tubulaton_output_file_path : Path,
+             config : dict,
+             depoly_proportion : float,
+             verbose : bool) -> Tuple[np.ndarray, np.ndarray]:
+    if verbose:
+        print(f"Loading MT points from {tubulaton_output_file_path} to numpy array...")
+    mt_points, mt_ids = get_mt_points(file_path=tubulaton_output_file_path,
+                                      config=config)
+    unique_mt_ids = np.unique(mt_ids)
+
+    if DEMO_MODE:
+        print("Showing visualization of tubulin (before depoly simulation)")
+        visualize(mt_points)
+
+    if verbose:
+        print(f"Simulating depolymerization (at rate {depoly_proportion})...")
+    
+    #TODO - (mt, tubulin)
+    tubulin_points, mt_points = simulate_depoly(mt_points=mt_points,
+                                                mt_ids=mt_ids,
+                                                config=config,
+                                                unique_mt_ids=unique_mt_ids,
+                                                proportion=depoly_proportion)
+    if DEMO_MODE:
+        print("Showing visualization of tubulin (after depoly simulation)")
+        visualize(tubulin_points)
+
     if verbose:
         print("Simulating positions of fluorophores...")
-    fluorophore_points = get_fluorophore_points(mt_points=mt_points,
+    fluorophore_points = get_fluorophore_points(tubulin_points=tubulin_points,
                                                 config=config)
     if DEMO_MODE:
         print("Visualizing fluorophore points...")
-        visualize(fluorophore_points)
+        visualize(fluorophore_points,
+                  colors='yellow',
+                  background_color='black')
 
     if DEMO_MODE:
-        num_plots = 4
-        fig, axs = plt.subplots(num_plots, 1, figsize=(10, 2 * num_plots))
+        plot_rows = 3
+        plot_cols = 2
+        fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10 * plot_cols, 2 * plot_rows))
+        axs = axs.flatten()
+    
+    z_min = fluorophore_points[:, 2].min()
+    z_max = fluorophore_points[:, 2].max()
+    x_min = fluorophore_points[:, 0].min()
+    x_max = fluorophore_points[:, 0].max()
+    y_min = fluorophore_points[:, 1].min()
+    y_max = fluorophore_points[:, 1].max()
+
+    # TODO - magic number
+    z_slice=z_min*0.9 + z_max*0.1
+
+    if verbose:
+        print("Generating label segmentation...")
+    label = get_label(mt_points=mt_points,
+                      z_slice=z_slice,
+                      config=config,
+                      bounding_box=(x_min, y_min, x_max, y_max),
+                      verbose=VERBOSE)
         
     # TODO - make z_slice tunable (i.e. actually use the z_slice argument)
     if verbose:
         print("Calculating fluorophore density over focal plane...")
-    z_min = fluorophore_points[:, 2].min()
-    z_max = fluorophore_points[:, 2].max()
-
     fluorophore_image = get_fluorophore_image(fluorophore_points=fluorophore_points,
                                               config=config,
-                                              z_slice=z_min*0.9 + z_max*0.1,
+                                              bounding_box=(x_min, y_min, x_max, y_max),
+                                              z_slice=z_slice,
                                               verbose=VERBOSE)
     
     if DEMO_MODE:
@@ -86,8 +131,6 @@ def generate_from_mt_points(mt_points : np.ndarray,
         axs[2].axis('off') #type: ignore
         axs[2].set_title("Image after Shot Noise") #type: ignore
 
-    # image = adjust_contrast(image=image, quantile=adjust_contrast_quantile)
-
     if verbose:
         print("Quantizing intensities...")
     image = quantize_intensities(image=image,
@@ -98,26 +141,59 @@ def generate_from_mt_points(mt_points : np.ndarray,
         axs[3].set_title("Image after Quantization") #type: ignore
 
     if DEMO_MODE:
+        axs[4].imshow(label, cmap='gray') #type: ignore
+        axs[4].axis('off') #type: ignore
+        axs[4].set_title("Label Segmentation") #type: ignore
+
+    if DEMO_MODE:
+        coloured_label = np.tile(label[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
+        coloured_label[:, :, 1] = 0.
+        coloured_label[:, :, 2] = 0.
+        for i in range(coloured_label.shape[0]):
+            for j in range(coloured_label.shape[1]):
+                if coloured_label[i,j,0] == 0.:
+                    coloured_label[i,j,3] = 0.
+
+        axs[5].imshow(coloured_label) #type: ignore
+
+        axs[5].imshow(image, cmap='gray', alpha=0.5) #type: ignore
+        axs[5].axis('off') #type: ignore
+        axs[5].set_title("Label Segmentation Overlaid") #type: ignore
+
+    if DEMO_MODE:
         plt.tight_layout()
         plt.show()
 
-    return image
+    return image, label
 
 if __name__ == '__main__':
     start_time = time.time()
+    random.seed(1000)
 
     if len(sys.argv) not in [4,5]:
         print("Invalid command line arguments!")
         print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [output_dir] [tubulaton_output_path] [config_file_path] <DEMO_MODE>")
+        print(f"python3 {sys.argv[0]} [output_dir] [tubulaton_output_path] [config_file_path] <depoly_rate>")
         print("Where [tubulaton_output_path] can be a file or directory.")
+        print("And if [output_dir] is \"DEMO\" program is run in demo mode, not saving any outputs to disk")
         exit(1)
 
-    output_dir : Path = Path(sys.argv[1])
+    if sys.argv[1].lower() == 'demo':
+        DEMO_MODE = True
+    else:
+        output_dir : Path = Path(sys.argv[1])
+        DEMO_MODE = False
     tubulaton_output_path : Path = Path(sys.argv[2])
     config_file_path : Path = Path(sys.argv[3])
 
-    DEMO_MODE = (len(sys.argv) == 5 and sys.argv[4].lower() == 'demo')
+    if len(sys.argv) <= 4:
+        depoly_proportion = np.random.random()
+    else:
+        depoly_proportion = float(sys.argv[4])
+
+    if not DEMO_MODE:
+        os.makedirs(output_dir / "Images/", exist_ok=True) #type: ignore
+        os.makedirs(output_dir / "Labels/", exist_ok=True) #type: ignore
 
     tubulaton_output_file_paths : list
     if tubulaton_output_path.is_dir():
@@ -135,9 +211,6 @@ if __name__ == '__main__':
     if not isinstance(config, dict):
         raise TypeError("JSON5 config file is of invalid format! It should be a dictionary")
 
-    os.makedirs(os.path.join(output_dir, 'Control'), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, 'Depoly'), exist_ok=True)
-
     file_path_iterator : Iterable   
     if DEMO_MODE:
         file_path = random.choice(tubulaton_output_file_paths)
@@ -147,69 +220,40 @@ if __name__ == '__main__':
         file_path_iterator = enumerate(tubulaton_output_file_paths)
 
     for output_index, tubulaton_output_file_path in file_path_iterator:
-        if VERBOSE:
-            print(f"Generating synthetic data from file {tubulaton_output_file_path}:")
-            print()
-
-        if VERBOSE:
-            print("Loading MT points from .vtk file to numpy array...")
-        mt_points, mt_ids = get_mt_points(file_path=tubulaton_output_file_path,
-                                          config=config)
-        if DEMO_MODE:
-            print("Visualizing MT points (control)...")
-            visualize(mt_points)
-
-        if VERBOSE:
-            print("Simulating depolymerization...")
-        depoly_mt_points = simulate_depoly(mt_points=mt_points,
-                                           config=config)
-        if DEMO_MODE:
-            print("Visualizing MT points (depoly)...")
-            visualize(depoly_mt_points)
-
-        if VERBOSE:
-            print("Generating control image...")
-        control_image = generate_from_mt_points(mt_points=mt_points,
-                                                config=config,
-                                                verbose=VERBOSE)
-
-        if VERBOSE:
-            print("Generating depolymerized image...")
-        depoly_image = generate_from_mt_points(mt_points=depoly_mt_points,
-                                               config=config,
-                                               verbose=VERBOSE)
-
-        if VERBOSE:
-            print("Converting np array to PIL.Image...")
-
+        # TODO - Magic number! (depoly_proportion argument)
+        image, label = generate(tubulaton_output_file_path=tubulaton_output_file_path,
+                                depoly_proportion=depoly_proportion,
+                                config=config,
+                                verbose=VERBOSE)
         if not DEMO_MODE:
-            control_image = control_image * 255. / control_image.max()
-            depoly_image = depoly_image * 255. / depoly_image.max()
+            if VERBOSE:
+                print("Converting np arrays to PIL.Image...")
 
-            control_image = Image.fromarray(control_image.astype(np.uint8), mode='L')
-            depoly_image = Image.fromarray(depoly_image.astype(np.uint8), mode='L')
+            image = image * 255. / image.max()
+            image = Image.fromarray(image.astype(np.uint8), mode='L')
+
+            label = label * 255
+            label = Image.fromarray(label, mode='L')
 
             if VERBOSE:
                 print("Saving synthetic data to files...")
 
-            control_file_path = output_dir / f'Control/image-{output_index+1}.png'
-            depoly_file_path = output_dir / f'Depoly/image-{output_index+1}.png'
+            image_file_path = output_dir / f'Images/image-{output_index+1}.png' #type: ignore
+            image.save(image_file_path)
 
-            control_image.save(control_file_path)
-            depoly_image.save(depoly_file_path)
+            label_file_path = output_dir / f'Labels/label-{output_index+1}.png' #type: ignore
+            label.save(label_file_path)
 
             if VERBOSE:
+                print(f"Saved data to {image_file_path} and {label_file_path}.")
                 print()
-                print("Saved data to following locations:")
-                print(f"Control: {control_file_path}")
-                print(f"Depolymerised: {depoly_file_path}")
 
     time_taken = time.time() - start_time
     if VERBOSE and not DEMO_MODE:
+        print()
         print(f"Took {time_taken:.2f} seconds.")
         print(f"({time_taken / len(tubulaton_output_file_paths):.2f} seconds per .vtk file)")
 
-# output_dir :            /Users/karan/MTData/Test_Output
-# tubulaton_output_path : /Users/karan/MTData/tubulaton-run
-# config_file_path :      /Users/karan/Microtubules/generation/config.json5
-# python3 generate.py /Users/karan/MTData/Test_Output /Users/karan/MTData/tubulaton-run/ /Users/karan/Microtubules/generation/config.json5 DEMO
+# To run the demo:
+# ----------------
+# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/Microtubules/generation/generate_config.json5 0.3

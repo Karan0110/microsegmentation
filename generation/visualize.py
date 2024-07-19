@@ -9,7 +9,8 @@ import matplotlib.colors as mcolors
 def visualize(points : np.ndarray,
               show_axes : bool = False,
               sample_size : Union[int, None] = 2 * 10**4,
-              colors : Union[list, str, None] = None) -> None:
+              colors : Union[list, str, None] = None,
+              background_color : Union[str, None] = None) -> None:
     num_points = points.shape[0]
 
     if sample_size is not None:
@@ -23,6 +24,10 @@ def visualize(points : np.ndarray,
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
+
+    if background_color is not None:
+        fig.patch.set_facecolor(background_color) #type: ignore
+        ax.set_facecolor(background_color)
 
     # Plot the points in black
     if colors is None:

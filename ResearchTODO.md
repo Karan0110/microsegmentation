@@ -28,3 +28,8 @@
 
 * Kairouz paper
 * Belief propagation (AKA message passing) algorithm
+* Information Theoyr
+
+## Physics
+
+* Quantum Theory for Mathematicians

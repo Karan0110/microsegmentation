@@ -52,13 +52,6 @@ def get_digital_signal(intensities : np.ndarray,
 
     return image 
 
-def adjust_contrast(image : np.ndarray,
-                    quantile : float) -> np.ndarray:
-    new_max = np.quantile(image.flatten(), quantile)
-    image = np.clip(image, a_min=0.0, a_max=new_max)
-
-    return image
-
 def quantize_intensities(image : np.ndarray,
                          config : dict) -> np.ndarray:
     bit_depth = config['microscope']['bit_depth']
