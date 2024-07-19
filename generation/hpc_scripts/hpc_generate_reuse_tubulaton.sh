@@ -65,7 +65,7 @@ source /rds/user/ke330/hpc-work/hpc-env/bin/activate
 application="/rds/user/ke330/hpc-work/generation/generate_reuse_tubulaton.sh"
 
 #! Run options for the application:
-options=""
+options="hpc"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory

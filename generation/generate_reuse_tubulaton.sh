@@ -26,5 +26,5 @@ else
     python_file_path="/Users/karan/Microtubules/generation/generate.py"
 fi
 
-python3 $python_file_path $output_dir $tubulaton_output_path $config_file_path
+python3 $python_file_path $output_dir $tubulaton_output_path $config_file_path 
 

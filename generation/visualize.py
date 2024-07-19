@@ -1,5 +1,5 @@
 from typing import Union
-import hashlib
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +8,14 @@ import matplotlib.colors as mcolors
 
 def visualize(points : np.ndarray,
               show_axes : bool = False,
+              sample_size : Union[int, None] = 2 * 10**4,
               colors : Union[list, str, None] = None) -> None:
+    num_points = points.shape[0]
+
+    if sample_size is not None:
+        indices = random.sample(range(num_points), sample_size)
+        points = points[indices]
+
     # Separate the points into x, y, and z coordinates
     x = points[:, 0]
     y = points[:, 1]
