@@ -7,18 +7,15 @@
 import os
 import sys
 from pathlib import Path
-from pprint import pprint
 import json5
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from resnet import ResNet
+from unet import UNet
 from epoch import train_model, test_model
-from tubulaton_dataset import get_data_loaders
-
-from tqdm import tqdm
+from synthetic_dataset import get_data_loaders
 
 if __name__ == '__main__':
     if len(sys.argv) not in [2,3]:
@@ -29,19 +26,22 @@ if __name__ == '__main__':
         exit(1)
 
     config_file_path = Path(sys.argv[1])
+    if config_file_path.suffix != '.json5':
+        print(f"Invalid config file path {config_file_path}")
+        print(f"Config file must be .json5")
+        exit(1)
+
     save_file_name = sys.argv[2] if len(sys.argv) >= 3 else "model"
 
     with config_file_path.open('r') as file:
         config = json5.load(file)
-
     if not isinstance(config, dict):
-        raise TypeError("JSON5 config file is of invalid format! It should be a dictionary")
+        raise TypeError(f"JSON5 config file {config_file_path} is of invalid format! It should be a dictionary")
 
     dataset_dir = Path(config['dataset_dir'])
     save_file_dir = Path(config['save_file_dir'])
     os.makedirs(save_file_dir, exist_ok=True)
 
-    save_file_path = save_file_dir / f"{save_file_name}.pth"
 
     patch_size = config['patch_size']
 
@@ -57,17 +57,33 @@ if __name__ == '__main__':
 
     # Data
     transform_config = config['transforms']
+    color_to_label = config['color_to_label']
+    color_to_label = {int(key) : value for key, value in color_to_label.items()}
+    batch_size = config['batch_size']
+    train_test_split = config['train_test_split']
+    batches_per_epoch = config['batches_per_epoch']
+    batches_per_test = config['batches_per_test']
+
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
-                                                 transform_config=transform_config)
+                                                 transform_config=transform_config,
+                                                 color_to_label=color_to_label,
+                                                 batch_size=batch_size,
+                                                 train_test_split=train_test_split)
 
     # Initialize model, loss function, optimizer, and scheduler
     model_config = config['model']
-    layers = model_config['layers']
+    depth = model_config['depth']
     in_channels = model_config['in_channels']
-    num_classes = model_config['num_classes']
+    out_channels = model_config['out_channels']
+    base_channel_num = model_config['base_channel_num']
+    convolution_padding_mode = model_config['convolution_padding_mode']
 
-    model = ResNet(layers=layers, in_channels=in_channels, num_classes=num_classes).to(device)
+    model = UNet(depth=depth,
+                 base_channel_num=base_channel_num,
+                 in_channels=in_channels,
+                 out_channels=out_channels,
+                 padding_mode=convolution_padding_mode).to(device)
 
     criterion = nn.CrossEntropyLoss()
 
@@ -81,29 +97,41 @@ if __name__ == '__main__':
     num_epochs = config['num_epochs']
 
     for epoch in range(num_epochs):
-        train_model(model, device, train_loader, criterion, optimizer, epoch)
-        progress_report = test_model(model, device, test_loader, criterion)
+        print(f"\nEpoch {epoch}")
+        print('-'*15 + '\n')
+
+        train_model(model=model,
+                    device=device,
+                    train_loader=train_loader,
+                    criterion=criterion,
+                    optimizer=optimizer,
+                    epoch=epoch,
+                    num_batches=batches_per_epoch)
+        progress_report = test_model(model=model, 
+                                     device=device, 
+                                     test_loader=test_loader, 
+                                     criterion=criterion,
+                                     num_batches=batches_per_test)
         scheduler.step()
 
         for key in progress_report:
             print(f"{key}: {progress_report[key]}")
             
-    #Save the model to file
-    model_state = {
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'scheduler': scheduler.state_dict(),
-        'epoch': num_epochs,
+        #Save the model to file (each epoch)
+        model_state = {
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict(),
+            'epoch': num_epochs,
 
-        'model_params': {
-            'patch_size': patch_size,
-            'layers': layers,
-            'in_channels': in_channels,
-            'num_classes': num_classes,
+            'config': config,
         }
-    }
 
-    torch.save(model_state,
-               f=save_file_path)
+        save_file_path = save_file_dir / f"{save_file_name}-e{epoch}.pth"
 
-    print(f"Saved model to {save_file_path}.")
+        torch.save(model_state,
+                   f=save_file_path)
+
+        print(f"Saved model to {save_file_path}.")
+
+# python3 train.py /Users/karan/Microtubules/classification/config.json5

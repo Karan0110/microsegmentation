@@ -1,9 +1,19 @@
-from typing import Union, Literal
+from typing import Union, Tuple
+from pathlib import Path
 
 import torch
 import torch.nn as nn
 
-PaddingMode = Literal['zeros', 'reflect', 'circular', 'replicate']
+# Example usage
+# if __name__ == '__main__':
+#     model = UNet(depth=4,
+#                 base_channel_num=64,
+#                 in_channels=1,
+#                 out_channels=3)
+#     input_tensor = torch.randn(1, 1, 512, 512)  # Example input tensor
+#     output_tensor = model(input_tensor)
+
+#     print("Output shape:", output_tensor.shape)
 
 def crop_and_concat(feature_map1: torch.Tensor, 
                     feature_map2: torch.Tensor) -> torch.Tensor:
@@ -26,7 +36,7 @@ class UNet(nn.Module):
                  base_channel_num : int,
                  in_channels : int,
                  out_channels : int,
-                 padding_mode : PaddingMode = 'zeros') -> None:
+                 padding_mode : str = 'zeros') -> None:
         super().__init__()
 
         self.padding_mode = padding_mode
@@ -38,11 +48,11 @@ class UNet(nn.Module):
         self.out_channels = out_channels
 
         # index 0 = top of diagram
-        self.down_layers = [
+        self.down_layers = nn.ModuleList([
             self._make_down_layer(in_channels=self.in_channels,
                                   out_channels=self.base_channel_num,
                                   do_maxpool=False)
-        ]
+        ])
 
         channel_num = self.base_channel_num
 
@@ -56,7 +66,7 @@ class UNet(nn.Module):
         channel_num *= 2
 
         # index 0 = bottom of diagram
-        self.up_layers = []
+        self.up_layers = nn.ModuleList()
         for i in range(self.depth):
             do_upsample = (i != self.depth - 1)
             up_layer = self._make_up_layer(in_channels=channel_num,
@@ -171,6 +181,7 @@ class UNet(nn.Module):
         residuals = []
         for current_depth in range(self.depth):
             down_layer = self.down_layers[current_depth]
+
             x = down_layer(x)
             residuals.append(x)
         residuals = residuals[::-1]
@@ -187,12 +198,24 @@ class UNet(nn.Module):
 
         return x
 
-# Example usage
-model = UNet(depth=4,
-             base_channel_num=64,
-             in_channels=1,
-             out_channels=3)
-input_tensor = torch.randn(1, 1, 512, 512)  # Example input tensor
-output_tensor = model(input_tensor)
+def load_model(model_file_path : Path, device) -> Tuple[nn.Module, dict]:
+    model_data : dict = torch.load(model_file_path)
+    config : dict = model_data['config']
+    model_config = config['model']
 
-print("Output shape:", output_tensor.shape)
+    depth = model_config['depth']
+    base_channel_num = model_config['base_channel_num']
+    in_channels = model_config['in_channels']
+    out_channels = model_config['out_channels']
+    padding_mode = model_config['convolution_padding_mode']
+
+    model = UNet(depth=depth,
+                 base_channel_num=base_channel_num,
+                 in_channels=in_channels,
+                 out_channels=out_channels,
+                 padding_mode=padding_mode)
+    model.load_state_dict(model_data['state_dict'])
+
+    model.eval()  
+
+    return model, config

@@ -1,5 +1,10 @@
 __pycache__/
-Misc/
+.vscode/
 .ipynb_checkpoints/
 .DS_Store
-.vscode/
+
+ResearchLeads.md
+Tasks.md
+
+Models/
+Papers/

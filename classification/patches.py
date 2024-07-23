@@ -10,8 +10,6 @@ from torch import Tensor
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 
-from resnet import ResNet
-
 #Returns tensor of shape (num_patches, channels, height, width)
 #The patches are ordered lexicographically, e.g.
 # 0 1 2
@@ -40,29 +38,23 @@ def get_image_patches(image : Tensor,
     
     return patches
 
-def get_patch_probabilities(image: np.ndarray,
-                            device : str,
-                            model : nn.Module, 
-                            patch_size : int) -> Tensor:
-    # Load image into appropriate tensor shape
-    transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
-    # Add batch dimension
-    transformed_image  = transform(image)
-    if not isinstance(transformed_image, Tensor):
-        raise ValueError('The transform of the image is not a Tensor')
-    image_tensor : Tensor = transformed_image.clone().detach()
-    image_tensor = image_tensor.unsqueeze(0) 
-    _, _, height, width = image_tensor.shape
+def stitch_image_patches(patches: Tensor, 
+                         original_shape: Tuple[int, int, int, int], 
+                         patch_size: int) -> Tensor:
+    b, c, h, w = original_shape
+    patches_per_col = (h + patch_size-1) // patch_size
+    patches_per_row = (w + patch_size-1) // patch_size
 
-    #Get patches
-    patches = get_image_patches(image_tensor, (patch_size, patch_size)).to(device)
-
-    # Run inference on each patch and collect probabilities
-    with torch.no_grad():
-        logits = model(patches)
-    probabilities : Tensor = F.softmax(logits, dim=1)[:, 0].to('cpu').numpy()
-
-    return probabilities
-
+    padded_h = patch_size * patches_per_col
+    padded_w = patch_size * patches_per_row
+    
+    # Reshape patches to the original dimensions
+    patches = patches.view(b, patches_per_col, patches_per_row, c, patch_size, patch_size)
+    
+    # Permute to match the original image dimensions
+    patches = patches.permute(0, 3, 1, 4, 2, 5).contiguous()
+    
+    # Combine patches
+    image = patches.view(b, c, padded_h, padded_w)
+    
+    return image
