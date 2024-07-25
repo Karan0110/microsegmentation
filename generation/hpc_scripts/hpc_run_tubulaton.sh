@@ -30,6 +30,9 @@
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
 
+#! Make the job a test
+##SBATCH --qos=intr
+
 #! sbatch directives end here (put any additional directives above this line)
 
 #! Notes:
@@ -61,11 +64,11 @@ module load vtk/7.1.1
 
 #! Full path to application executable: 
 source /rds/user/ke330/hpc-work/hpc-env/bin/activate
-application="/rds/user/ke330/hpc-work/generation/run_tubulaton.sh"
+application="/rds/user/ke330/hpc-work/ml_microsegmentation/generation/run_tubulaton.sh"
 
 #! Run options for the application:
-time_steps=1000
-options="$SLURM_JOB_ID $time_steps hpc"
+time_steps=2000
+options="$SLURM_ARRAY_TASK_ID $time_steps hpc"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory

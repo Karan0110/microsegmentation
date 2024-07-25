@@ -19,7 +19,7 @@ if [[ "$environment" == "hpc" ]]; then
     output_dir="$base_dir/tubulaton-run/"
 
     create_tubulaton_config_path="$generation_dir/create_tubulaton_config.py"
-	meta_config_file_path="$generation_dir/tubulaton_config.json5"
+    meta_config_file_path="$generation_dir/tubulaton_config.json5"
 else
     generation_dir="/Users/karan/Microtubules/generation"
     tubulaton_dir="/Users/karan/tubulaton/"
@@ -27,7 +27,7 @@ else
     output_dir="/Users/karan/MTData/tubulaton-run_TEST/"
 
     create_tubulaton_config_path="$generation_dir/create_tubulaton_config.py"
-	meta_config_file_path="$generation_dir/tubulaton_config.json5"
+    meta_config_file_path="$generation_dir/tubulaton_config.json5"
 fi
 
 sample_name="$1"

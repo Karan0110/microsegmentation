@@ -1,0 +1,78 @@
+Loading rhel8/default-icl
+  Loading requirement: dot rhel8/slurm singularity/current rhel8/global
+    cuda/11.4 vgl/2.5.1/64 intel-oneapi-compilers/2022.1.0/gcc/b6zld2mz
+    intel-oneapi-mpi/2021.6.0/intel/guxuvcpm
+Changed directory to /rds/user/ke330/hpc-work/ml_microsegmentation/generation/hpc_scripts.
+
+JobID: 57524205
+======
+Time: Thu 25 Jul 18:53:13 BST 2024
+Running on master node: cpu-q-14
+Current directory: /rds/user/ke330/hpc-work/ml_microsegmentation/generation/hpc_scripts
+
+Nodes allocated:
+================
+cpu-q-14
+
+numtasks=3, numnodes=1, mpi_tasks_per_node=3 (OMP_NUM_THREADS=1)
+
+Executing command:
+==================
+/rds/user/ke330/hpc-work/ml_microsegmentation/generation/run_tubulaton.sh 1 1 hpc
+
+Setting up config file...
+=========================
+
+
+
+Running tubulaton...
+====================
+identify contour
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb1460): Reading file version: 4.2 with older reader version 4.1
+
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb1460): Reading file version: 4.2 with older reader version 4.1
+
+Hash Resolution: 51
+Boundse before
+xmin: 800 xmax: 12050
+ymin: 800 ymax: 2050
+zmin: 800 zmax: 2050
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb1460): Reading file version: 4.2 with older reader version 4.1
+
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb26a0): Reading file version: 4.2 with older reader version 4.1
+
+surface 4.4176e+07
+surface_ref 4.4176e+07
+There are 111802 components in normalDataFloat
+Nucleation equally on all points
+Contour number: 0
+0.38334
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb1460): Reading file version: 4.2 with older reader version 4.1
+
+Warning: In /home/fs395/scratch/USER_SUPPORT/Tobias/VTK-7.1.1/IO/Legacy/vtkDataReader.cxx, line 490
+vtkPolyDataReader (0x1eb26a0): Reading file version: 4.2 with older reader version 4.1
+
+surface 3.1367e+06
+surface_ref 4.4176e+07
+There are 2000 components in normalDataFloat
+Nucleation equally on all points
+Contour number: 1
+0.12596
+after identify contour
+Num_in=48
+Num_in=39
+Number of MTs created:87
+0I/rds/user/ke330/hpc-work/tubulaton/bin/tubulaton
+Time taken up to this step:0
+Number of alive elements: 176
+Time taken up to this step:0
+Number of alive elements: 263
+The program took 4.5819 seconds to execute
+
+
+Output .vtk file saved to /rds/user/ke330/hpc-work/tubulaton-run/tubulaton-1.vtk
