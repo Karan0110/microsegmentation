@@ -2,10 +2,10 @@
     "tubulaton_parameters": {
         "num_input_vtk": "2",
 
-        'nom_input_vtk': "Cylinder_10000_EqualNucleation.vtk",
-        'nom_input_vtk_2': "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
-        'nom_input_vtk_ref': "Cylinder_10000_EqualNucleation.vtk",
-        'nom_input_vtk_ref_2': "Cylinder_10000_EqualNucleation.vtk",
+        "nom_input_vtk": "Cylinder_10000_EqualNucleation.vtk",
+        "nom_input_vtk_2": "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
+        "nom_input_vtk_ref": "Cylinder_10000_EqualNucleation.vtk",
+        "nom_input_vtk_ref_2": "Cylinder_10000_EqualNucleation.vtk",
 
         //Make sure these are equal to avoid wasted vtk savefiles (they are just deleted!)
         "vtk_steps": "5",
@@ -49,10 +49,7 @@
         "gr_st_moins": "0",
         "gr_st_plus": "1",
         "nom_config": "config.ini",
-        "nom_input_vtk": "",
-        "nom_input_vtk_2": "",
-        "nom_input_vtk_ref": "",
-        "nom_input_vtk_ref_2": "",
+
         "nom_output_vtk": "NucleusInsideCyl_",
         "nom_rapport": "NucleusInsideCyl.txt",
         "part_alea_alea": "1",
@@ -69,5 +66,5 @@
 
     "positive_real_params": ["Angle_bundle", "Angle_cut", "Angle_mb_limite", "Angle_mb_trajectoire"],
     "natural_number_params": ["D_bundle", "nb_microtubules_init", "nb_microtubules_init_2"],
-    "prob_params": ["proba_crossmicro_cut", "proba_crossmicro_shrink", "proba_detachement_par_step_par_microtubule", "proba_initialisation_area", "proba_initialisation_area_2", 'proba_shrink'],
+    "prob_params": ["proba_crossmicro_cut", "proba_crossmicro_shrink", "proba_detachement_par_step_par_microtubule", "proba_initialisation_area", "proba_initialisation_area_2", "proba_shrink"],
 }

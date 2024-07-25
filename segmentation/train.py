@@ -16,6 +16,7 @@ import torch.optim as optim
 from unet import UNet
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
+from synthetic_dataset import Labels
 
 if __name__ == '__main__':
     if len(sys.argv) not in [2,3]:
@@ -38,11 +39,9 @@ if __name__ == '__main__':
     if not isinstance(config, dict):
         raise TypeError(f"JSON5 config file {config_file_path} is of invalid format! It should be a dictionary")
 
-    dataset_dir = Path(config['dataset_dir'])
-    save_file_dir = Path(config['save_file_dir'])
+    dataset_dir = Path(config['training_data']['dataset_dir'])
+    save_file_dir = Path(config['training']['save_file_dir'])
     os.makedirs(save_file_dir, exist_ok=True)
-
-    patch_size = config['patch_size']
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU
     device = (
@@ -55,13 +54,19 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # Data
-    transform_config = config['transforms']
-    color_to_label = config['color_to_label']
+    training_data_config = config['training_data']
+    training_config = config['training']
+
+    transform_config = training_data_config['transforms']
+    color_to_label = training_data_config['color_to_label']
     color_to_label = {int(key) : value for key, value in color_to_label.items()}
-    batch_size = config['batch_size']
-    train_test_split = config['train_test_split']
-    batches_per_epoch = config['batches_per_epoch']
-    batches_per_test = config['batches_per_test']
+
+    batch_size = training_config['batch_size']
+    train_test_split = training_config['train_test_split']
+    batches_per_epoch = training_config['batches_per_epoch']
+    batches_per_test = training_config['batches_per_test']
+
+    patch_size = config['model']['patch_size']
 
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
@@ -78,22 +83,38 @@ if __name__ == '__main__':
     base_channel_num = model_config['base_channel_num']
     convolution_padding_mode = model_config['convolution_padding_mode']
 
+    training_config = config['training']
+    num_epochs = training_config['num_epochs']
+
     model = UNet(depth=depth,
                  base_channel_num=base_channel_num,
                  in_channels=in_channels,
                  out_channels=out_channels,
                  padding_mode=convolution_padding_mode).to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    loss_config = training_config['loss']
+    loss_name = loss_config['name']
+    loss_params = loss_config['params']
 
-    optimizer_config = config['optimizer']
+    # Process class_weights to pytorch format
+    if loss_name == 'CrossEntropyLoss':
+        raw_class_weights = loss_params['class_weights']
+        class_weights = [None] * len(Labels)
+        for label_str in raw_class_weights:
+            index = Labels[label_str].value
+            class_weights[index] = raw_class_weights[label_str]
+        loss_params['class_weights'] = class_weights
+
+    LossFunction = getattr(nn, loss_name)
+    criterion = LossFunction()
+
+    optimizer_config = training_config['optimizer']
     optimizer = optim.SGD(model.parameters(), **optimizer_config)
 
-    scheduler_config = config['scheduler']
+    scheduler_config = training_config['scheduler']
     scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
     # Training and testing loop
-    num_epochs = config['num_epochs']
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch}")
@@ -121,16 +142,15 @@ if __name__ == '__main__':
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'scheduler': scheduler.state_dict(),
-            'epoch': num_epochs,
 
             'config': config,
         }
 
-        save_file_path = save_file_dir / f"{save_file_name}-e{epoch}.pth"
+        save_file_path = save_file_dir / f"{save_file_name}-e{epoch+1}.pth"
 
         torch.save(model_state,
                    f=save_file_path)
 
         print(f"Saved model to {save_file_path}.")
 
-# python3 train.py /Users/karan/Microtubules/classification/config.json5
+# python3 train.py /Users/karan/Microtubules/segmentation/config.json5

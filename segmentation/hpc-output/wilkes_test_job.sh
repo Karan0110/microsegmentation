@@ -17,17 +17,20 @@
 #SBATCH --nodes=1
 #! How many (MPI) tasks will there be in total?
 #! Note probably this should not exceed the total number of GPUs in use.
-#SBATCH --ntasks=4
+#SBATCH --ntasks=1
 #! Specify the number of GPUs per node (between 1 and 4; must be 4 if nodes>1).
 #! Note that the job submission script will enforce no more than 32 cpus per GPU.
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 #! How much wallclock time will be required?
-#SBATCH --time=12:00:00
+#SBATCH --time=00:02:00
 #! What types of email messages do you wish to receive?
 #SBATCH --mail-type=NONE
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
+
+#! Run as test
+#SBATCH --qos=intr
 
 #! Do not change:
 #SBATCH -p ampere
@@ -56,11 +59,11 @@ module load rhel8/default-amp              # REQUIRED - loads the basic environm
 #! Full path to application executable: 
 base_dir="/rds/user/ke330/hpc-work"
 source $base_dir/hpc-env/bin/activate
-application="python3 $base_dir/classification/train.py"
+application="python3 $base_dir/segmentation/train.py"
 
 #! Run options for the application:
-config_file_path="$base_dir/classification/config/hpc-train-config.json"
-save_file_name="model"
+config_file_path="$base_dir/segmentation/config/hpc-test-train-config.json"
+save_file_name="TEST_OUTPUT_model"
 options="$config_file_path $save_file_name"
 
 #! Work directory (i.e. where the job will run):

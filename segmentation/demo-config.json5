@@ -1,0 +1,82 @@
+{
+    "model_file_path": "/Users/karan/Microtubules/Models/model-v2.pth",
+
+    //Can be any folder you want - handled by the code
+    "segmentation_cache_dir": "/Users/karan/Microtubules/segmentation/.demo_segmentation_cache",
+
+    "image_label_pair_file_paths": [
+        /*{
+            'image': '/Users/karan/MTData/trichome_1.png',
+            'label': null,
+        },*/
+
+        /*{
+            'image': '/Users/karan/MTData/ExperimentalIndividualImages/Control/frame_0004_0002.png',
+            'label': null,
+        },
+
+        {
+            'image': '/Users/karan/MTData/ExperimentalIndividualImages/Depolymerised/frame_0000_0006.png',
+            'label': null,
+        },*/
+
+        {
+            'image': '/Users/karan/MTData/SimulatedData/Images/image-400.png',
+            'label': '/Users/karan/MTData/SimulatedData/Labels/label-400.png',
+        }
+    ],
+
+    "figure_size": [13.0, 1.5], 
+
+    //Choices are "off", "no_tickers", "full"
+    "axes_mode": "full",
+
+    "shuffle_data": false,
+    "max_num_demos": 8,
+
+    "graph_columns": {
+        "probability_histogram": {
+            "title": "Predicted Probability Histogram",
+            "x_label": "POLY Probability",
+            "y_label": "Frequency",
+            "show": true,
+        }
+    },
+
+    "image_columns": {
+        'image': {
+            'color': [0.0, 0.0, 1.0],
+            'title': "Original Image",
+            'show': false,
+        },
+
+        'segmentation': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Segmentation (Soft)",
+            'show': false,
+        },
+
+        'hard_segmentation': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Segmentation (Hard)",
+            'show': false,
+
+            "segmentation_threshold": 0.019,
+        },
+
+        'ground_truth': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Ground Truth Segmentation",
+            'show': false,
+        }
+    },
+
+    "overlays": [
+        {
+            'image_1': 'image',
+            'image_2': 'hard_segmentation',
+            'interpolation': 0.8,
+            'show': false,
+        }
+    ],
+}

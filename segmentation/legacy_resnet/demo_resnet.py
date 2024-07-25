@@ -99,7 +99,7 @@ def plot_demo(detailed : bool,
 
 if __name__ == '__main__':
     if sys.argv[1] == 'default':
-        model_file_path = Path("/Users/karan/Microtubules/classification/models/model.pth")
+        model_file_path = Path("/Users/karan/Microtubules/Models/model.pth")
     else:
         model_file_path = Path(sys.argv[1])
     image_path = Path(sys.argv[2])

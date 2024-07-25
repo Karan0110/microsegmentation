@@ -18,17 +18,23 @@ from inference import get_segmentation
 import torch
 import torch.nn as nn
 
-def get_num_cols_to_show(columns : dict,
+def get_num_cols_to_show(image_columns : dict,
+                         graph_columns : dict,
                          overlays : list) -> int:
     count = 0
     
-    for col_name in columns:
-        col_info = columns[col_name]
+    for col_name in image_columns:
+        col_info = image_columns[col_name]
         if col_info['show']:
             count += 1
 
     for overlay_info in overlays:
         if overlay_info['show']:
+            count += 1
+
+    for col_name in graph_columns:
+        col_info = graph_columns[col_name]
+        if col_info['show']:
             count += 1
 
     return count 
@@ -99,7 +105,7 @@ def plot_demo_row(image_file_path : Path,
     segmentation_cache_dir = Path(demo_config["segmentation_cache_dir"])
     axes_mode = demo_config['axes_mode']
 
-    columns = demo_config['columns']
+    image_columns = demo_config['image_columns']
     overlays = demo_config['overlays']
 
     set_title = (row == 0)
@@ -121,7 +127,7 @@ def plot_demo_row(image_file_path : Path,
                                     cache_file_path=segmentation_cache_file_path,
                                     verbose=True)
 
-    config_segmentation_threshold : Union[str, float] = columns['hard_segmentation']['segmentation_threshold']
+    config_segmentation_threshold : Union[str, float] = image_columns['hard_segmentation']['segmentation_threshold']
     segmentation_threshold : float
     segmentation_threshold, images['hard_segmentation'] = get_hard_segmentation(segmentation=images['segmentation'],
                                                                                 segmentation_threshold=config_segmentation_threshold)
@@ -133,8 +139,8 @@ def plot_demo_row(image_file_path : Path,
     colored_images = {}
 
     ax_index = 0
-    for col_name in columns:
-        col_info = columns[col_name]
+    for col_name in image_columns:
+        col_info = image_columns[col_name]
 
         do_show = col_info['show']
         if not do_show:
@@ -175,7 +181,28 @@ def plot_demo_row(image_file_path : Path,
         axs[row, ax_index].imshow(overlaid_image)
 
         if set_title:
-            title = f"{image_1_name} overlaid with {image_2_name}"
+            title = f"{image_1_name}/{image_2_name}"
+            axs[row, ax_index].set_title(title)
+
+        ax_index += 1
+
+    graph_columns = demo_config['graph_columns']
+
+    probability_histogram_info = graph_columns['probability_histogram']
+    if probability_histogram_info['show']:
+        title = probability_histogram_info['title']
+        x_label = probability_histogram_info['x_label']
+        y_label = probability_histogram_info['y_label']
+
+        # prop_exactly_0 = (images['image'] == 0.).mean()
+        # print(f"{prop_exactly_0 * 100}% of pixels given probability exactly 0")
+
+        axs[row, ax_index].hist(images['image'].flatten(), bins='auto', color='gray', edgecolor='black')
+
+        axs[row, ax_index].set_xlabel(x_label)
+        axs[row, ax_index].set_ylabel(y_label)
+
+        if set_title:
             axs[row, ax_index].set_title(title)
 
         ax_index += 1
@@ -201,15 +228,6 @@ if __name__ == '__main__':
 
     model_file_path = Path(demo_config['model_file_path'])
 
-    image_label_pair_file_paths = demo_config['image_label_pair_file_paths']
-
-    if demo_config['shuffle_data']:
-        random.shuffle(image_label_pair_file_paths)
-    
-    max_num_demos = demo_config['max_num_demos']
-    if max_num_demos is not None:
-        image_label_pair_file_paths = image_label_pair_file_paths[:max_num_demos]
-
     # General device handling: Check for CUDA/GPU, else fallback to CPU
     device = (
         "cuda"
@@ -224,17 +242,29 @@ if __name__ == '__main__':
     config : dict
     model, config = load_model(model_file_path=model_file_path,
                                device=device)
+
+    image_label_pair_file_paths = demo_config['image_label_pair_file_paths']
+
+    if demo_config['shuffle_data']:
+        random.shuffle(image_label_pair_file_paths)
+    
+    max_num_demos = demo_config['max_num_demos']
+    if max_num_demos is not None:
+        image_label_pair_file_paths = image_label_pair_file_paths[:max_num_demos]
+
     patch_size = config['patch_size']
     print("Loaded trained U-Net model.")
 
-    columns = demo_config['columns']
+    image_columns = demo_config['image_columns']
+    graph_columns = demo_config['graph_columns']
     overlays = demo_config['overlays']
 
-    num_cols_to_show = get_num_cols_to_show(columns=columns,
+    num_cols_to_show = get_num_cols_to_show(image_columns=image_columns,
+                                            graph_columns=graph_columns,
                                             overlays=overlays)
 
-    figure_size = tuple(demo_config['figure_size'])
-    fig, axs = plt.subplots(len(image_label_pair_file_paths), num_cols_to_show, figsize=figure_size)
+    # figure_size = tuple(demo_config['figure_size'])
+    fig, axs = plt.subplots(len(image_label_pair_file_paths), num_cols_to_show)#, figsize=figure_size)
     if len(image_label_pair_file_paths) == 1 and num_cols_to_show == 1:
         axs = np.array([axs])
     axs = axs.reshape((-1, num_cols_to_show))
@@ -255,6 +285,5 @@ if __name__ == '__main__':
                       demo_config=demo_config,
                       axs=axs,
                       row=row)
-
         print()
     plt.show()

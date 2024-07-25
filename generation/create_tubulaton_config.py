@@ -23,31 +23,32 @@ def generate_config_dict(tubulaton_config : dict,
                          input_mesh_dir : Path,
                          num_time_steps : int,
                          output_file_id : str) -> dict:
-    config_dict = tubulaton_config['tubulaton_parameters'].copy()
+    config_dict = tubulaton_config.copy()
+    tubulaton_parameters = config_dict['tubulaton_parameters']
 
     #TODO Refactor tubulaton to not require the dir path ending in /
-    config_dict['nom_folder_output_vtk'] = str(tubulaton_output_dir) + '/'
-    config_dict['nom_folder_input_vtk'] = str(input_mesh_dir) + '/'
+    tubulaton_parameters['nom_folder_output_vtk'] = str(tubulaton_output_dir) + '/'
+    tubulaton_parameters['nom_folder_input_vtk'] = str(input_mesh_dir) + '/'
 
-    config_dict['nom_output_vtk'] = f"tubulaton-{output_file_id}_"
+    tubulaton_parameters['nom_output_vtk'] = f"tubulaton-{output_file_id}_"
 
-    config_dict['vtk_steps'] = str(num_time_steps)
-    config_dict['nb_max_steps'] = str(num_time_steps)
+    tubulaton_parameters['vtk_steps'] = str(num_time_steps)
+    tubulaton_parameters['nb_max_steps'] = str(num_time_steps)
 
     positive_real_params = config_dict['positive_real_params']
     for param in positive_real_params:
-        orig_value = float(config_dict[param])
+        orig_value = float(tubulaton_parameters[param])
         sigma = orig_value / 3
 
         new_value = orig_value + np.random.normal(loc=0, scale=sigma)
         if new_value < 0.:
             new_value = 0.
 
-        config_dict[param] = str(new_value)
+        tubulaton_parameters[param] = str(new_value)
 
     natural_number_params = config_dict['natural_number_params']
     for param in natural_number_params:
-        orig_value = float(config_dict[param])
+        orig_value = float(tubulaton_parameters[param])
         sigma = orig_value / 3
 
         new_value = orig_value + np.random.normal(loc=0, scale=sigma)
@@ -55,18 +56,18 @@ def generate_config_dict(tubulaton_config : dict,
             new_value = 0.
         new_value = int(new_value)
 
-        config_dict[param] = str(new_value)
+        tubulaton_parameters[param] = str(new_value)
     
     prob_params = config_dict['prob_params']
     for param in prob_params:
-        orig_value = float(config_dict[param])
+        orig_value = float(tubulaton_parameters[param])
 
         new_value = orig_value * (np.random.random() * 2 + 0.3)
         new_value = np.clip(new_value, a_min=0., a_max=1.)
 
-        config_dict[param] = str(new_value)
-    
-    return config_dict
+        tubulaton_parameters[param] = str(new_value)
+
+    return tubulaton_parameters
     
 def create_tubulaton_config(tubulaton_dir : Path, 
                             output_dir : Path,
@@ -102,7 +103,7 @@ if __name__ == '__main__':
         print("Invalid tubulaton_config.json5 file provided!")
         print(f"{tubulaton_config_file_path} is not a dictionary")
         exit(1)
-
+    
     create_tubulaton_config(tubulaton_dir=tubulaton_dir,
                             output_dir=output_dir,
                             tubulaton_config=tubulaton_config,

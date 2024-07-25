@@ -1,0 +1,55 @@
+{
+    "model": {
+        "patch_size": 128,
+        "depth": 4, 
+        "in_channels": 1,
+        "out_channels": 2,
+        "base_channel_num": 64, 
+        "convolution_padding_mode": 'reflect',
+    },
+
+    "training_data": {
+        "dataset_dir": "/Users/karan/MTData/SimulatedData",
+
+        "color_to_label": {
+            "0": "DEPOLYMERIZED",
+            "255": "POLYMERIZED",
+        },
+
+        "transforms": [],
+    },
+
+    "training": {
+        "save_file_dir": "/Users/karan/Microtubules/Models/",
+
+        "num_epochs": 50,
+        "batches_per_epoch": 200,
+        "batches_per_test": 40,
+        "batch_size": 2, 
+
+        "train_test_split": 0.8,
+
+        "optimizer": {
+            "lr": 1e-4,
+            "momentum": 0.9,
+            "weight_decay": 5e-4
+        },
+
+        "scheduler": {
+            "step_size": 30, 
+            "gamma": 0.1
+        },
+
+        "loss": {
+            "name": "CrossEntropyLoss",
+
+            "params": {
+                //Calculated directly in python notebook. If this is the right way to go, make the calculation automatic.
+                "class_weights": {
+                    "POLYMERIZED": 0.98,
+                    "DEPOLYMERIZED": 0.02,
+                },
+            },
+        }
+    }
+}

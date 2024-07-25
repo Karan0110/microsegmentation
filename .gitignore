@@ -2,13 +2,14 @@ __pycache__/
 .vscode/
 .ipynb_checkpoints/
 .DS_Store
-classification/demo_segmentation_cache/
+.demo_segmentation_cache/
 
 ResearchLeads.md
 Tasks.md
 
-Models/
 Papers/
+Models/
 job_templates/
-JupyterNotebooks/Sandbox.ipynb
-JupyterNotebooks/sandbox.py
+Sandbox.ipynb
+sandbox.py
+
