@@ -1,0 +1,1 @@
+Include a note about the `demo_segmentation_cache`

@@ -84,7 +84,7 @@ def plot_demo(detailed : bool,
                  alpha=1.)
     
     if detailed:
-        #Draw Colourbar
+        #Draw Colorbar
         gradient = np.linspace(0, 1, 256)
         gradient = np.vstack((gradient, gradient))
 

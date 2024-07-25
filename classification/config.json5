@@ -1,6 +1,7 @@
 {
     "dataset_dir": "/Users/karan/MTData/SimulatedData",
     "save_file_dir": "/Users/karan/Microtubules/Models/",
+
     "patch_size": 128,
 
     "num_epochs": 50,
@@ -12,7 +13,6 @@
         "0": "DEPOLYMERIZED",
         "255": "POLYMERIZED",
     },
-
 
     "train_test_split": 0.8,
 

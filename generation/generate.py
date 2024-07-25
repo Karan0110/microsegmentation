@@ -146,15 +146,15 @@ def generate(tubulaton_output_file_path : Path,
         axs[4].set_title("Label Segmentation") #type: ignore
 
     if DEMO_MODE:
-        coloured_label = np.tile(label[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
-        coloured_label[:, :, 1] = 0.
-        coloured_label[:, :, 2] = 0.
-        for i in range(coloured_label.shape[0]):
-            for j in range(coloured_label.shape[1]):
-                if coloured_label[i,j,0] == 0.:
-                    coloured_label[i,j,3] = 0.
+        colored_label = np.tile(label[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
+        colored_label[:, :, 1] = 0.
+        colored_label[:, :, 2] = 0.
+        for i in range(colored_label.shape[0]):
+            for j in range(colored_label.shape[1]):
+                if colored_label[i,j,0] == 0.:
+                    colored_label[i,j,3] = 0.
 
-        axs[5].imshow(coloured_label) #type: ignore
+        axs[5].imshow(colored_label) #type: ignore
 
         axs[5].imshow(image, cmap='gray', alpha=0.5) #type: ignore
         axs[5].axis('off') #type: ignore

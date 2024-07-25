@@ -1,0 +1,57 @@
+{
+    "model_file_path": "/Users/karan/Microtubules/Models/model-v1.pth",
+
+    //Can be any folder you want - handled by the code
+    "segmentation_cache_dir": "/Users/karan/Microtubules/classification/demo_segmentation_cache",
+
+    "image_label_pair_file_paths": [
+        {
+            'image': '/Users/karan/MTData/trichome_1.png',
+            'label': null,
+        },
+    ],
+
+    "figure_size": [13.0, 1.5], 
+    //Choices are "off", "no_tickers", "full"
+    "axes_mode": "no_tickers",
+
+    "shuffle_data": false,
+    "max_num_demos": 8,
+
+    "columns": {
+        'image': {
+            'color': [0.0, 0.0, 1.0],
+            'title': "Original Image",
+            'show': true,
+        },
+
+        'segmentation': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Segmentation (Soft)",
+            'show': true,
+        },
+
+        'hard_segmentation': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Segmentation (Hard)",
+            'show': true,
+
+            "segmentation_threshold": 0.025,
+        },
+
+        'ground_truth': {
+            'color': [1.0, 0.0, 0.0],
+            'title': "Ground Truth Segmentation",
+            'show': false,
+        }
+    },
+
+    "overlays": [
+        {
+            'image_1': 'image',
+            'image_2': 'hard_segmentation',
+            'interpolation': 0.8,
+            'show': true,
+        }
+    ],
+}

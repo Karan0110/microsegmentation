@@ -42,7 +42,6 @@ if __name__ == '__main__':
     save_file_dir = Path(config['save_file_dir'])
     os.makedirs(save_file_dir, exist_ok=True)
 
-
     patch_size = config['patch_size']
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU

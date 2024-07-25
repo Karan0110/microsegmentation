@@ -1,6 +1,10 @@
-from typing import Tuple
+from typing import Tuple, Union
+from pathlib import Path
+import time
+import os
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -10,11 +14,23 @@ import torchvision.transforms as transforms
 
 from patches import get_image_patches, stitch_image_patches
 
+from synthetic_dataset import Labels
+
 def get_segmentation(image: np.ndarray,
                      device : str,
                      model : nn.Module, 
                      patch_size : int,
-                     batch_size : int = 1) -> Tensor:
+                     batch_size : int = 1,
+                     cache_file_path : Union[Path, None] = None,
+                     verbose : bool = False) -> np.ndarray:
+    if cache_file_path is not None and cache_file_path.exists():
+        segmentation = np.load(cache_file_path)
+        if verbose:
+            print(f"Loaded segmentation from cache: {cache_file_path}")
+        return segmentation
+
+    start_time = time.time()
+    
     # Convert image to tensor
     transform = transforms.Compose([
         transforms.ToTensor()
@@ -43,12 +59,25 @@ def get_segmentation(image: np.ndarray,
     logits = torch.cat(batched_logits, dim=0) #type: ignore
 
     # Get pixel probabilities
-    probabilities = F.softmax(logits, dim=1)[:, 1, :, :].unsqueeze(1)
+    probabilities = F.softmax(logits, dim=1)[:, Labels.POLYMERIZED.value, :, :].unsqueeze(1)
 
     # Stitch patches together to get full image segmentation
     probabilities = stitch_image_patches(patches=probabilities,
                                         original_shape=original_image_shape,
                                         patch_size=patch_size)
-    probabilities = probabilities.squeeze()
+    segmentation = probabilities.squeeze()
+    segmentation = segmentation.to('cpu').numpy()
 
-    return probabilities
+    time_taken = time.time() - start_time    
+
+    if verbose:
+        print(f"Ran inference in {time_taken} seconds.")
+
+    if cache_file_path is not None:
+        os.makedirs(cache_file_path.parent, exist_ok=True)
+        np.save(cache_file_path, segmentation)
+
+        if verbose:
+            print(f"Ran inference and saved to cache: {cache_file_path}")
+
+    return segmentation
