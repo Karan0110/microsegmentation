@@ -9,7 +9,7 @@ import json5
 import time
 import random
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Union
 
 import numpy as np
 import scipy
@@ -173,8 +173,9 @@ if __name__ == '__main__':
     if len(sys.argv) not in [4,5]:
         print("Invalid command line arguments!")
         print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [output_dir] [tubulaton_output_path] [config_file_path] <depoly_rate>")
+        print(f"python3 {sys.argv[0]} [output_dir] [tubulaton_output_path] [config_file_path] <file_id>")
         print("Where [tubulaton_output_path] can be a file or directory.")
+        print("If <file_id> is provided when [tubulaton_output_path] is a directory, only tubulaton-<file_id>.vtk is used.")
         print("And if [output_dir] is \"DEMO\" program is run in demo mode, not saving any outputs to disk")
         exit(1)
 
@@ -186,23 +187,39 @@ if __name__ == '__main__':
     tubulaton_output_path : Path = Path(sys.argv[2])
     config_file_path : Path = Path(sys.argv[3])
 
+    file_id : Union[int, None]
     if len(sys.argv) <= 4:
-        depoly_proportion = np.random.random()
+        file_id = None
     else:
-        depoly_proportion = float(sys.argv[4])
+        file_id = int(sys.argv[4])
+
+    depoly_proportion = np.random.random()
 
     if not DEMO_MODE:
         os.makedirs(output_dir / "Images/", exist_ok=True) #type: ignore
         os.makedirs(output_dir / "Labels/", exist_ok=True) #type: ignore
 
     tubulaton_output_file_paths : list
-    if tubulaton_output_path.is_dir():
-        tubulaton_output_file_paths = [file_path for file_path in tubulaton_output_path.iterdir() if file_path.suffix == '.vtk'] 
-    elif tubulaton_output_path.is_file():
-        tubulaton_output_file_paths = [tubulaton_output_path]
+    if file_id is not None:
+        if tubulaton_output_path.is_file():
+            print(f"Provided file ID {file_id}, but didn't give a directory for tubulaton_output_path!")
+            exit(1)
+
+        target_tubulaton_output_file_path = tubulaton_output_path / f"tubulaton-{file_id}.vtk" 
+        if not target_tubulaton_output_file_path.exists():
+            print(f"Provided file ID {file_id} does not correspond to a file:")
+            print(f"{target_tubulaton_output_file_path} is not a file!")
+            exit(1)
+        
+        tubulaton_output_file_paths = [target_tubulaton_output_file_path]
     else:
-        print(f"Provided [tubulaton_output_path]: {sys.argv[2]} is neither a file nor a directory!")
-        exit(1)
+        if tubulaton_output_path.is_dir():
+            tubulaton_output_file_paths = [file_path for file_path in tubulaton_output_path.iterdir() if file_path.suffix == '.vtk'] 
+        elif tubulaton_output_path.is_file():
+            tubulaton_output_file_paths = [tubulaton_output_path]
+        else:
+            print(f"Provided [tubulaton_output_path]: {sys.argv[2]} is neither a file nor a directory!")
+            exit(1)
 
     if VERBOSE:
         print("Loading config file...")
@@ -220,7 +237,6 @@ if __name__ == '__main__':
         file_path_iterator = enumerate(tubulaton_output_file_paths)
 
     for output_index, tubulaton_output_file_path in file_path_iterator:
-        # TODO - Magic number! (depoly_proportion argument)
         image, label = generate(tubulaton_output_file_path=tubulaton_output_file_path,
                                 depoly_proportion=depoly_proportion,
                                 config=config,
@@ -252,8 +268,9 @@ if __name__ == '__main__':
     if VERBOSE and not DEMO_MODE:
         print()
         print(f"Took {time_taken:.2f} seconds.")
-        print(f"({time_taken / len(tubulaton_output_file_paths):.2f} seconds per .vtk file)")
+        if len(tubulaton_output_file_paths) > 1:
+            print(f"({time_taken / len(tubulaton_output_file_paths):.2f} seconds per .vtk file)")
 
 # To run the demo:
 # ----------------
-# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/Microtubules/generation/generate_config.json5 0.3
+# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/Microtubules/generation/generate_config.json5 

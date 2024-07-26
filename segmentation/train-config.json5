@@ -15,8 +15,6 @@
             "0": "DEPOLYMERIZED",
             "255": "POLYMERIZED",
         },
-
-        "transforms": [],
     },
 
     "training": {

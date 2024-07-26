@@ -65,7 +65,7 @@ source /rds/user/ke330/hpc-work/hpc-env/bin/activate
 application="/rds/user/ke330/hpc-work/ml_microsegmentation/generation/generate.sh"
 
 #! Run options for the application:
-options="hpc"
+options="hpc $SLURM_ARRAY_TASK_ID"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
