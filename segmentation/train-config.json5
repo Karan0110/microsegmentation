@@ -9,7 +9,7 @@
     },
 
     "training_data": {
-        "dataset_dir": "/Users/karan/MTData/SimulatedData",
+        "dataset_dir": "/Users/karan/MTData/Synthetic",
 
         "color_to_label": {
             "0": "DEPOLYMERIZED",
@@ -43,7 +43,7 @@
 
             "params": {
                 //Calculated directly in python notebook. If this is the right way to go, make the calculation automatic.
-                "class_weights": {
+                "weight": {
                     "POLYMERIZED": 0.98,
                     "DEPOLYMERIZED": 0.02,
                 },

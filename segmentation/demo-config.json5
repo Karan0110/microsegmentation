@@ -1,5 +1,5 @@
 {
-    "model_file_path": "/Users/karan/Microtubules/Models/model-v2.pth",
+    "model_file_path": "/Users/karan/Microtubules/Models/model-v3.pth",
 
     //Can be any folder you want - handled by the code
     "segmentation_cache_dir": "/Users/karan/Microtubules/segmentation/.demo_segmentation_cache",
@@ -21,8 +21,8 @@
         },*/
 
         {
-            'image': '/Users/karan/MTData/SimulatedData/Images/image-400.png',
-            'label': '/Users/karan/MTData/SimulatedData/Labels/label-400.png',
+            'image': '/Users/karan/MTData/Synthetic/Images/image-400.png',
+            'label': '/Users/karan/MTData/Synthetic/Labels/label-400.png',
         }
     ],
 

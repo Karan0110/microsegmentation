@@ -1,8 +1,8 @@
 {
-    "dataset_dir": "/rds/users/ke330/SimulatedData",
-    "save_file_dir": "/rds/users/ke330/Models",
+    "dataset_dir": "/Users/karan/MTData/Synthetic",
+    "save_file_dir": "/Users/karan/Microtubules/Models/",
     "patch_size": 128,
-    "num_epochs": 1,
+    "num_epochs": 30,
 
     "model": {
         "layers": [2, 2, 2, 2],

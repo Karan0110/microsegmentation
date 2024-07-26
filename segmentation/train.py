@@ -19,10 +19,10 @@ from synthetic_dataset import get_data_loaders
 from synthetic_dataset import Labels
 
 if __name__ == '__main__':
-    if len(sys.argv) not in [2,3]:
+    if len(sys.argv) not in [3,4]:
         print("Too few / many command-line arguments!")
         print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [config_file_path] <save_file_name>")
+        print(f"python3 {sys.argv[0]} [config_file_path] [augmentation_config_file_path] <save_file_name>")
         print("Where default name for model save file is \"model\"")
         exit(1)
 
@@ -32,12 +32,23 @@ if __name__ == '__main__':
         print(f"Config file must be .json5")
         exit(1)
 
-    save_file_name = sys.argv[2] if len(sys.argv) >= 3 else "model"
+    augmentation_config_file_path = Path(sys.argv[2])
+    if augmentation_config_file_path.suffix != '.json5':
+        print(f"Invalid augmentation config file path {augmentation_config_file_path}")
+        print(f"Config file must be .json5")
+        exit(1)
+
+    save_file_name = sys.argv[3] if len(sys.argv) >= 4 else "model"
 
     with config_file_path.open('r') as file:
         config = json5.load(file)
     if not isinstance(config, dict):
         raise TypeError(f"JSON5 config file {config_file_path} is of invalid format! It should be a dictionary")
+
+    with augmentation_config_file_path.open('r') as file:
+        augmentation_config = json5.load(file)
+    if not isinstance(augmentation_config, dict):
+        raise TypeError(f"JSON5 config file {augmentation_config_file_path} is of invalid format! It should be a dictionary")
 
     dataset_dir = Path(config['training_data']['dataset_dir'])
     save_file_dir = Path(config['training']['save_file_dir'])
@@ -57,7 +68,11 @@ if __name__ == '__main__':
     training_data_config = config['training_data']
     training_config = config['training']
 
-    transform_config = training_data_config['transforms']
+    # TODO TESTING REMOVE THIS!!!
+    # transform_config = augmentation_config['transforms']
+    transform_config = []
+    # REMOVE THIS!!!
+    
     color_to_label = training_data_config['color_to_label']
     color_to_label = {int(key) : value for key, value in color_to_label.items()}
 
@@ -98,15 +113,15 @@ if __name__ == '__main__':
 
     # Process class_weights to pytorch format
     if loss_name == 'CrossEntropyLoss':
-        raw_class_weights = loss_params['class_weights']
+        raw_class_weights = loss_params['weight']
         class_weights = [None] * len(Labels)
         for label_str in raw_class_weights:
             index = Labels[label_str].value
             class_weights[index] = raw_class_weights[label_str]
-        loss_params['class_weights'] = class_weights
+        loss_params['weight'] = torch.tensor(class_weights).to(device)
 
     LossFunction = getattr(nn, loss_name)
-    criterion = LossFunction()
+    criterion = LossFunction(**loss_params)
 
     optimizer_config = training_config['optimizer']
     optimizer = optim.SGD(model.parameters(), **optimizer_config)

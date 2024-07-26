@@ -252,7 +252,7 @@ if __name__ == '__main__':
     if max_num_demos is not None:
         image_label_pair_file_paths = image_label_pair_file_paths[:max_num_demos]
 
-    patch_size = config['patch_size']
+    patch_size = config['model']['patch_size']
     print("Loaded trained U-Net model.")
 
     image_columns = demo_config['image_columns']
