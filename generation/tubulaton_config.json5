@@ -20,7 +20,7 @@
         //Any natural number
         "D_bundle": "49",
         "nb_microtubules_init": "30",
-        "nb_microtubules_init_2": "30",
+        "nb_microtubulesnit_2": "30",
 
         //Any probability
         "proba_crossmicro_cut": "0.005",

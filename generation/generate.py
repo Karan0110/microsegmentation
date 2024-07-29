@@ -273,4 +273,4 @@ if __name__ == '__main__':
 
 # To run the demo:
 # ----------------
-# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/Microtubules/generation/generate_config.json5 
+# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 

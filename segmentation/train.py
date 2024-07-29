@@ -8,65 +8,107 @@ import os
 import sys
 from pathlib import Path
 import json5
+import pickle
+import time
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import Optimizer, lr_scheduler
+
+from torch.utils.tensorboard import SummaryWriter
 
 from unet import UNet
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
 from synthetic_dataset import Labels
+from demo import log_demo
+
+def load_json5_config(file_path : Path) -> dict:
+    if file_path.suffix != '.json5':
+        raise ValueError(f"Invalid config file path {file_path}\n" + f"Config file must be .json5")
+
+    with file_path.open('r') as file:
+        config = json5.load(file)
+    if not isinstance(config, dict):
+        raise TypeError(f"JSON5 config file {file_path} is of invalid format! It should be a dictionary")
+
+    return config
+
+def save_model(model : nn.Module,
+               optimizer : Optimizer,
+               scheduler : lr_scheduler._LRScheduler,
+               model_config : dict,
+               training_config : dict,
+               save_file_dir : Path, 
+               file_name_stem : str,
+               verbose : bool = False) -> Path:
+    model_state = {
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'scheduler': scheduler.state_dict(),
+    }
+
+    os.makedirs(save_file_dir, exist_ok=True)
+
+    state_save_file_path = save_file_dir / f"{file_name_stem}.pth"
+    config_save_file_path = save_file_dir / f"{file_name_stem}_config.pkl"
+
+    torch.save(model_state,
+                f=state_save_file_path)
+    with config_save_file_path.open('wb') as f:
+        pickle.dump({
+            'model': model_config,
+            'training': training_config,
+        }, f)
+
+    if verbose:
+        print(f"Saved model to {state_save_file_path}.")
+        print(f"Saved model config to {config_save_file_path}.")
+    
+    return state_save_file_path
 
 if __name__ == '__main__':
-    if len(sys.argv) not in [3,4]:
+    start_time = time.time()
+
+    # Validate command line arguments
+    if (len(sys.argv)-1) not in [1,2]:
         print("Too few / many command-line arguments!")
         print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [config_file_path] [augmentation_config_file_path] <save_file_name>")
+        print(f"python3 {sys.argv[0]} [config_dir] <save_file_name>")
         print("Where default name for model save file is \"model\"")
         exit(1)
 
-    config_file_path = Path(sys.argv[1])
-    if config_file_path.suffix != '.json5':
-        print(f"Invalid config file path {config_file_path}")
-        print(f"Config file must be .json5")
-        exit(1)
+    # Load the config files
+    config_dir = Path(sys.argv[1])
 
-    augmentation_config_file_path = Path(sys.argv[2])
-    if augmentation_config_file_path.suffix != '.json5':
-        print(f"Invalid augmentation config file path {augmentation_config_file_path}")
-        print(f"Config file must be .json5")
-        exit(1)
+    training_config = load_json5_config(config_dir / 'training-config.json5')
+    training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
+    augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
+    demo_config = load_json5_config(config_dir / 'demo-config.json5')
+    model_config = load_json5_config(config_dir / 'model-config.json5')
 
-    save_file_name = sys.argv[3] if len(sys.argv) >= 4 else "model"
+    # Prepare directories for reading/writing
+    save_file_name = sys.argv[2] if (len(sys.argv)-1) == 2 else "model"
 
-    with config_file_path.open('r') as file:
-        config = json5.load(file)
-    if not isinstance(config, dict):
-        raise TypeError(f"JSON5 config file {config_file_path} is of invalid format! It should be a dictionary")
+    dataset_dir = Path(training_data_config['dataset_dir'])
+    save_file_dir = Path(training_config['save_file_dir']) 
 
-    with augmentation_config_file_path.open('r') as file:
-        augmentation_config = json5.load(file)
-    if not isinstance(augmentation_config, dict):
-        raise TypeError(f"JSON5 config file {augmentation_config_file_path} is of invalid format! It should be a dictionary")
-
-    dataset_dir = Path(config['training_data']['dataset_dir'])
-    save_file_dir = Path(config['training']['save_file_dir'])
     os.makedirs(save_file_dir, exist_ok=True)
+
+    writer = SummaryWriter(f"runs/{save_file_name}")
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU
     device = (
         "cuda"
         if torch.cuda.is_available()
         else "mps"
-        if torch.backends.mps.is_available()
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
         else "cpu"
     )
     print(f"Using {device} device")
 
-    # Data
-    training_data_config = config['training_data']
-    training_config = config['training']
+    # Set up data loaders
 
     # TODO TESTING REMOVE THIS!!!
     # transform_config = augmentation_config['transforms']
@@ -81,7 +123,7 @@ if __name__ == '__main__':
     batches_per_epoch = training_config['batches_per_epoch']
     batches_per_test = training_config['batches_per_test']
 
-    patch_size = config['model']['patch_size']
+    patch_size = model_config['patch_size']
 
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
@@ -91,14 +133,13 @@ if __name__ == '__main__':
                                                  train_test_split=train_test_split)
 
     # Initialize model, loss function, optimizer, and scheduler
-    model_config = config['model']
+
     depth = model_config['depth']
     in_channels = model_config['in_channels']
     out_channels = model_config['out_channels']
     base_channel_num = model_config['base_channel_num']
     convolution_padding_mode = model_config['convolution_padding_mode']
 
-    training_config = config['training']
     num_epochs = training_config['num_epochs']
 
     model = UNet(depth=depth,
@@ -111,7 +152,6 @@ if __name__ == '__main__':
     loss_name = loss_config['name']
     loss_params = loss_config['params']
 
-    # Process class_weights to pytorch format
     if loss_name == 'CrossEntropyLoss':
         raw_class_weights = loss_params['weight']
         class_weights = [None] * len(Labels)
@@ -123,49 +163,86 @@ if __name__ == '__main__':
     LossFunction = getattr(nn, loss_name)
     criterion = LossFunction(**loss_params)
 
+    # Training and testing loop
+
     optimizer_config = training_config['optimizer']
     optimizer = optim.SGD(model.parameters(), **optimizer_config)
 
     scheduler_config = training_config['scheduler']
     scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
-    # Training and testing loop
+    tensorboard_demo_config_file_path : Path = Path(training_config['tensorboard_demo_config_file_path'])
 
     for epoch in range(num_epochs):
+        epoch_start_time = time.time()
+
         print(f"\nEpoch {epoch}")
         print('-'*15 + '\n')
 
         train_model(model=model,
                     device=device,
+                    writer=writer,
                     train_loader=train_loader,
                     criterion=criterion,
                     optimizer=optimizer,
                     epoch=epoch,
-                    num_batches=batches_per_epoch)
-        progress_report = test_model(model=model, 
-                                     device=device, 
-                                     test_loader=test_loader, 
-                                     criterion=criterion,
-                                     num_batches=batches_per_test)
+                    num_batches=batches_per_epoch,
+                    verbose=True)
+
+        test_model(model=model, 
+                   device=device, 
+                   tensorboard_demo_config_file_path=tensorboard_demo_config_file_path,
+                   writer=writer,
+                   epoch=epoch,
+                   patch_size=patch_size,
+                   test_loader=test_loader, 
+                   criterion=criterion,
+                   num_batches=batches_per_test,
+                   verbose=True)
+                   
         scheduler.step()
 
-        for key in progress_report:
-            print(f"{key}: {progress_report[key]}")
-            
-        #Save the model to file (each epoch)
-        model_state = {
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'scheduler': scheduler.state_dict(),
+        save_model(model=model,
+                   optimizer=optimizer,
+                   scheduler=scheduler, #type: ignore
+                   model_config=model_config,
+                   training_config=training_config,
+                   save_file_dir=save_file_dir / save_file_name,
+                   file_name_stem=f"epoch_{epoch+1}",
+                   verbose=True)
 
-            'config': config,
-        }
+        print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
 
-        save_file_path = save_file_dir / f"{save_file_name}-e{epoch+1}.pth"
+    print("\nSaving final model to file...")
+    state_save_file_path = save_model(model=model,
+                                      optimizer=optimizer,
+                                      scheduler=scheduler, #type: ignore
+                                      model_config=model_config,
+                                      training_config=training_config,
+                                      save_file_dir=save_file_dir,
+                                      file_name_stem=save_file_name,
+                                      verbose=True)
 
-        torch.save(model_state,
-                   f=save_file_path)
 
-        print(f"Saved model to {save_file_path}.")
+    print("\nLogging demo of model to tensorboard...")
+    log_demo(writer=writer,
+             demo_config=demo_config,
+             model=model,
+             device=device,
+             patch_size=patch_size,
+             num_epochs=num_epochs,
+             verbose=True,
+             use_caching=False,
+             model_file_path=state_save_file_path)
 
-# python3 train.py /Users/karan/Microtubules/segmentation/config.json5
+    # Output time taken
+
+    time_taken = int(time.time() - start_time)
+    seconds = time_taken % 60
+    minutes = (time_taken // 60) % 60
+    hours = time_taken // (60**2)
+    print(f"\nTook {hours} hrs {minutes} min in total.")
+
+    writer.close()
+
+# python3 train.py train-config.json5 augmentation-config.json5 model-v3

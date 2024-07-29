@@ -5,14 +5,14 @@
 ## The Teams
 
 * French (Marie-Edith)
- * Main driver
- * Made the microchannels
+	* Main driver
+	* Made the microchannels
 * SLCU (Henrik) 
- * Botanicon model
+	* Botanicon model
 * Japanese:
- * Investigated genetic mutants
+	* Investigated genetic mutants
 * French (Atef)
- * Did further experiements with the microchannels     
+	* Did further experiements with the microchannels     
 
  
 ## Drugs used to Effect Cytoskeleton Network

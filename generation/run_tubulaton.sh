@@ -21,7 +21,7 @@ if [[ "$environment" == "hpc" ]]; then
     create_tubulaton_config_path="$generation_dir/create_tubulaton_config.py"
     meta_config_file_path="$generation_dir/tubulaton_config.json5"
 else
-    generation_dir="/Users/karan/Microtubules/generation"
+    generation_dir="/Users/karan/microsegmentation/generation"
     tubulaton_dir="/Users/karan/tubulaton/"
     input_mesh_dir="/Users/karan/tubulaton/structures/2024_Karan/"
     output_dir="/Users/karan/MTData/tubulaton-run_TEST/"

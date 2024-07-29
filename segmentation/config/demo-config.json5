@@ -1,0 +1,28 @@
+{
+    "image_label_pair_file_paths": [
+        {
+            'image': '/Users/karan/MTData/Experimental/trichome_1.png',
+            'label': null,
+        },
+
+        {
+            'image': '/Users/karan/MTData/Experimental/ExperimentalIndividualImages/Control/frame_0004_0002.png',
+            'label': null,
+        },
+
+        {
+            'image': '/Users/karan/MTData/Experimental/ExperimentalIndividualImages/Depolymerised/frame_0000_0006.png',
+            'label': null,
+        },
+
+        {
+            'image': '/Users/karan/MTData/Synthetic/Images/image-400.png',
+            'label': '/Users/karan/MTData/Synthetic/Labels/label-400.png',
+        }
+    ],
+
+    "shuffle_data": false,
+    "max_num_demos": null,
+
+    "hard_segmentation_threshold": 0.5,
+}

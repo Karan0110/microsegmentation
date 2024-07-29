@@ -24,9 +24,9 @@ if [[ "$environment" == "hpc" ]]; then
 else
     output_dir="/Users/karan/MTData/Synthetic_TEST"
     tubulaton_output_path="/Users/karan/MTData/tubulaton-run"
-    config_file_path="/Users/karan/Microtubules/generation/generate_config.json5"
+    config_file_path="/Users/karan/microsegmentation/generation/generate_config.json5"
 
-    python_file_path="/Users/karan/Microtubules/generation/generate.py"
+    python_file_path="/Users/karan/microsegmentation/generation/generate.py"
 fi
 
 python3 $python_file_path $output_dir $tubulaton_output_path $config_file_path $file_id
