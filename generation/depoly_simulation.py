@@ -7,7 +7,7 @@ def simulate_depoly(mt_points : np.ndarray,
                     config : dict,
                     proportion : float,
                     unique_mt_ids : Union[np.ndarray, None] = None) -> Tuple[np.ndarray, np.ndarray]:
-    depoly_displacement_std = config['microsegmentation']['depoly_displacement_std']
+    depoly_displacement_std = config['microtubules']['depoly_displacement_std']
 
     if mt_points.shape[0] != mt_ids.shape[0]:
         raise ValueError(f"List of MTs and MT ids aren't aligned properly!\n(Shapes {mt_points.shape} and {mt_ids.shape} respectively)")

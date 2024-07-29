@@ -50,7 +50,7 @@
         "absorption_cross_section": 3e-20,
     },
 
-    "microsegmentation": {
+    "microtubules": {
         "depoly_displacement_std": 70.0,
     },
 }

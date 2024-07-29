@@ -1,0 +1,21 @@
+{
+    "image_label_pair_file_paths": [
+        {
+            'image': '/rds/user/ke330/hpc-work/SyntheticData/Images/image-400.png',
+            'label': '/rds/user/ke330/hpc-work/SyntheticData/Labels/label-400.png',
+        },
+        {
+            'image': '/rds/user/ke330/hpc-work/SyntheticData/Images/image-600.png',
+            'label': '/rds/user/ke330/hpc-work/SyntheticData/Labels/label-600.png',
+        },
+        {
+            'image': '/rds/user/ke330/hpc-work/SyntheticData/Images/image-800.png',
+            'label': '/rds/user/ke330/hpc-work/SyntheticData/Labels/label-800.png',
+        },
+    ],
+
+    "shuffle_data": false,
+    "max_num_demos": null,
+
+    "hard_segmentation_threshold": 0.5,
+}

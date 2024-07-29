@@ -1,0 +1,8 @@
+{
+    "dataset_dir": "/rds/user/ke330/hpc-work/SyntheticData/",
+
+    "color_to_label": {
+        "0": "DEPOLYMERIZED",
+        "255": "POLYMERIZED",
+    },
+}

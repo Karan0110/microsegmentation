@@ -173,7 +173,6 @@ if __name__ == '__main__':
     scheduler_config = training_config['scheduler']
     scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
-    tensorboard_demo_config_file_path : Path = Path(training_config['tensorboard_demo_config_file_path'])
 
     for epoch in range(num_epochs):
         epoch_start_time = time.time()
@@ -193,7 +192,6 @@ if __name__ == '__main__':
 
         test_model(model=model, 
                    device=device, 
-                   tensorboard_demo_config_file_path=tensorboard_demo_config_file_path,
                    writer=writer,
                    epoch=epoch,
                    patch_size=patch_size,

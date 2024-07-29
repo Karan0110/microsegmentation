@@ -1,5 +1,5 @@
 {
-    "save_file_dir": "/Users/karan/microsegmentation/Models/",
+    "save_file_dir": "/rds/user/ke330/hpc-work/Models/",
 
     "num_epochs": 100, // null
     "batches_per_epoch": 1000, //null

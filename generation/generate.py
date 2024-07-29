@@ -26,7 +26,7 @@ from labelling import get_label
 from visualize import visualize
 
 VERBOSE = True
-DEMO_MODE = False
+DEMO_MODE = True
 
 def generate(tubulaton_output_file_path : Path,
              config : dict,
@@ -193,7 +193,8 @@ if __name__ == '__main__':
     else:
         file_id = int(sys.argv[4])
 
-    depoly_proportion = np.random.random()
+    #TODO magic number (i.e. hardcoded distribution - should be in config)
+    depoly_proportion = np.random.beta(a=5, b=5)
 
     if not DEMO_MODE:
         os.makedirs(output_dir / "Images/", exist_ok=True) #type: ignore
@@ -274,3 +275,10 @@ if __name__ == '__main__':
 # To run the demo:
 # ----------------
 # python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 
+
+
+# To run on local:
+# ----------------
+# python3 generate.py /Users/karan/MTData/Synthetic_new_run /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 
+
+
