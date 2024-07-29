@@ -5,6 +5,7 @@ __pycache__/
 .segmentation_cache/
 machine.file.*
 *.out
+.venv_*/
 
 ResearchLeads.md
 Tasks.md

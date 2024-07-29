@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
 def train_model(model : nn.Module, 
-                device : str, 
+                device : torch.device, 
                 train_loader : DataLoader, 
                 criterion : nn.Module,  
                 optimizer : Optimizer, 
@@ -58,7 +58,7 @@ def train_model(model : nn.Module,
     writer.flush()
 
 def test_model(model : nn.Module, 
-               device : str, 
+               device : torch.device, 
                patch_size : int,
                tensorboard_demo_config_file_path : Path,
                test_loader : DataLoader, 

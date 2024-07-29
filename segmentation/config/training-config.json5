@@ -24,7 +24,7 @@
         "name": "CrossEntropyLoss",
 
         "params": {
-            //Calculated directly in python notebook. If this is the right way to go, make the calculation automatic.
+            //Calculated "manually" in python notebook. If this is the right way to go, make the calculation automatic.
             "weight": {
                 "POLYMERIZED": 0.98,
                 "DEPOLYMERIZED": 0.02,

@@ -99,14 +99,16 @@ if __name__ == '__main__':
     writer = SummaryWriter(f"runs/{save_file_name}")
 
     # General device handling: Check for CUDA/GPU, else fallback to CPU
-    device = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
-        else "cpu"
-    )
-    print(f"Using {device} device")
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        device_name = torch.cuda.get_device_name(0)
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+        device_name = 'Apple Silicon GPU'
+    else:
+        device = torch.device('cpu')
+        device_name = 'CPU'
+    print(f"Using device: {device}")
 
     # Set up data loaders
 

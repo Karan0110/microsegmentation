@@ -32,7 +32,7 @@ def load_grayscale_image(image_file_path : Path) -> np.ndarray:
 def log_demo(writer : SummaryWriter,
              demo_config : dict, 
              model : nn.Module,
-             device : str,
+             device : torch.device,
              patch_size : int,
              num_epochs : int,
              verbose : bool = False,

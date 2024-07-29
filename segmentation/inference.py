@@ -37,7 +37,7 @@ def get_hard_segmentation(segmentation : np.ndarray,
     return hard_segmentation
 
 def get_segmentation(image: np.ndarray,
-                     device : str,
+                     device : torch.device,
                      model : nn.Module, 
                      patch_size : int,
                      batch_size : int = 1,
