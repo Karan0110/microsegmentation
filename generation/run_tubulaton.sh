@@ -12,7 +12,7 @@ environment="$3"
 
 if [[ "$environment" == "hpc" ]]; then
     base_dir="/rds/user/ke330/hpc-work"
-    generation_dir="$base_dir/ml_microsegmentation/generation"
+    generation_dir="$base_dir/microsegmentation/generation"
 
     tubulaton_dir="$base_dir/tubulaton/"
     input_mesh_dir="$base_dir/tubulaton/structures/2024_Karan/"

@@ -14,7 +14,7 @@ file_id="$2"
 
 if [[ "$environment" == "hpc" ]]; then
     base_dir="/rds/user/ke330/hpc-work"
-    generate_dir="$base_dir/ml_microsegmentation/generate"
+    generate_dir="$base_dir/microsegmentation/generate"
 
     output_dir="$base_dir/SyntheticData/"
     tubulaton_output_path="$base_dir/tubulaton-run"

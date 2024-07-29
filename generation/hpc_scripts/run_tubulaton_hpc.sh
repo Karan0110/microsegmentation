@@ -30,7 +30,7 @@
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
 
-# Testing
+#! Make the job a test
 ##SBATCH --qos=intr
 
 #! sbatch directives end here (put any additional directives above this line)
@@ -60,12 +60,16 @@ module load rhel8/default-icl              # REQUIRED - loads the basic environm
 
 #! Insert additional module load commands after this line if needed:
 
+module load vtk/7.1.1
+
 #! Full path to application executable: 
-source /rds/user/ke330/hpc-work/hpc-env/bin/activate
-application="/rds/user/ke330/hpc-work/ml_microsegmentation/generation/generate.sh"
+base_dir="/rds/user/ke330/hpc-work/microsegmentation/generation"
+source $base_dir/.venv_generation/bin/activate
+application="$base_dir/run_tubulaton.sh"
 
 #! Run options for the application:
-options="hpc $SLURM_ARRAY_TASK_ID"
+time_steps=$1
+options="$SLURM_ARRAY_TASK_ID $time_steps hpc"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory

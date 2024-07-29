@@ -54,13 +54,13 @@ module load rhel8/default-amp              # REQUIRED - loads the basic environm
 #! Insert additional module load commands after this line if needed:
 
 #! Full path to application executable: 
-base_dir="/rds/user/ke330/hpc-work"
-source $base_dir/hpc-env/bin/activate
-application="python3 $base_dir/segmentation/train.py"
+base_dir="/rds/user/ke330/hpc-work/microsegmentation/segmentation"
+source $base_dir/.venv_segmentation/bin/activate
+application="python3 $base_dir/train.py"
 
 #! Run options for the application:
-config_file_path="$base_dir/segmentation/config/hpc-train-config.json"
-save_file_name="model"
+config_file_path="$base_dir/config/"
+save_file_name="$1"
 options="$config_file_path $save_file_name"
 
 #! Work directory (i.e. where the job will run):
