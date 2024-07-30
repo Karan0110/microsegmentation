@@ -23,17 +23,8 @@ from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
 from synthetic_dataset import Labels
 from demo import log_demo
-
-def load_json5_config(file_path : Path) -> dict:
-    if file_path.suffix != '.json5':
-        raise ValueError(f"Invalid config file path {file_path}\n" + f"Config file must be .json5")
-
-    with file_path.open('r') as file:
-        config = json5.load(file)
-    if not isinstance(config, dict):
-        raise TypeError(f"JSON5 config file {file_path} is of invalid format! It should be a dictionary")
-
-    return config
+from load import load_json5_config
+from device import get_device
 
 def save_model(model : nn.Module,
                optimizer : Optimizer,
@@ -50,9 +41,10 @@ def save_model(model : nn.Module,
     }
 
     os.makedirs(save_file_dir, exist_ok=True)
+    os.makedirs(save_file_dir / 'model_config', exist_ok=True)
 
     state_save_file_path = save_file_dir / f"{file_name_stem}.pth"
-    config_save_file_path = save_file_dir / f"{file_name_stem}_config.pkl"
+    config_save_file_path = save_file_dir / 'model_config' / f"{file_name_stem}_config.pkl"
 
     torch.save(model_state,
                 f=state_save_file_path)
@@ -98,17 +90,8 @@ if __name__ == '__main__':
 
     writer = SummaryWriter(f"runs/{save_file_name}")
 
-    # General device handling: Check for CUDA/GPU, else fallback to CPU
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-        device_name = torch.cuda.get_device_name(0)
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        device = torch.device('mps')
-        device_name = 'Apple Silicon GPU'
-    else:
-        device = torch.device('cpu')
-        device_name = 'CPU'
-    print(f"Using device: {device}")
+    # Set up device
+    device : torch.device = get_device(verbose=True)
 
     # Set up data loaders
 
@@ -232,7 +215,7 @@ if __name__ == '__main__':
              patch_size=patch_size,
              num_epochs=num_epochs,
              verbose=True,
-             use_caching=False,
+             use_caching=True,
              model_file_path=state_save_file_path)
 
     # Output time taken

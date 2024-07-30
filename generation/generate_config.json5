@@ -4,7 +4,7 @@
     "fluorophore_batch_size": 50000,
     "fluorophore_batch_spread": 4,
 
-    "mt_label_point_radius": 5,
+    "mt_label_point_radius": 10, //TODO testing
 
     "microscope": {
         "numerical_aperature": 1.40,

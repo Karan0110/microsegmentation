@@ -197,25 +197,3 @@ class UNet(nn.Module):
         x = self.conv1x1(x)        
 
         return x
-
-def load_model(model_file_path : Path, device) -> Tuple[nn.Module, dict]:
-    model_data : dict = torch.load(model_file_path)
-    config : dict = model_data['config']
-    model_config = config['model']
-
-    depth = model_config['depth']
-    base_channel_num = model_config['base_channel_num']
-    in_channels = model_config['in_channels']
-    out_channels = model_config['out_channels']
-    padding_mode = model_config['convolution_padding_mode']
-
-    model = UNet(depth=depth,
-                 base_channel_num=base_channel_num,
-                 in_channels=in_channels,
-                 out_channels=out_channels,
-                 padding_mode=padding_mode)
-    model.load_state_dict(model_data['state_dict'])
-
-    model.eval()  
-
-    return model, config

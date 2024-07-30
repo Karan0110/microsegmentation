@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Check if an argument is supplied
-if [ $# -lt 2 ]; then
-    echo "At least 2 argument needed!"
-	echo "Correct usages $0 [environment] [file_id]"
+if [ $# -lt 1 ]; then
+    echo "At least 1 argument needed!"
+	echo "Correct usage: $0 [environment] <file_id>"
     echo "Where [environment] is \"hpc\" or \"home\""
-    echo "And input .vtk file should have name tubulaton-[file_id].vtk"
+    echo "And input .vtk file should have name tubulaton-<file_id>.vtk"
     exit 1
 fi
 
@@ -14,7 +14,7 @@ file_id="$2"
 
 if [[ "$environment" == "hpc" ]]; then
     base_dir="/rds/user/ke330/hpc-work"
-    generate_dir="$base_dir/microsegmentation/generate"
+    generate_dir="$base_dir/microsegmentation/generation"
 
     output_dir="$base_dir/SyntheticData/"
     tubulaton_output_path="$base_dir/tubulaton-run"

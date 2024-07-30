@@ -70,6 +70,7 @@ def generate(tubulaton_output_file_path : Path,
         plot_cols = 2
         fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10 * plot_cols, 2 * plot_rows))
         axs = axs.flatten()
+        axs_index = 0
     
     z_min = fluorophore_points[:, 2].min()
     z_max = fluorophore_points[:, 2].max()
@@ -99,9 +100,10 @@ def generate(tubulaton_output_file_path : Path,
                                               verbose=VERBOSE)
     
     if DEMO_MODE:
-        axs[0].imshow(fluorophore_image, cmap='gray') #type: ignore
-        axs[0].axis('off') #type: ignore
-        axs[0].set_title("Fluorophore image") #type: ignore
+        axs[axs_index].imshow(fluorophore_image, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Fluorophore image") #type: ignore
+        axs_index += 1 #type: ignore
 
     if verbose:
         print("Calculating fluorophore photon emission rate...")
@@ -118,47 +120,52 @@ def generate(tubulaton_output_file_path : Path,
     intensities = scipy.signal.convolve2d(intensities, psf_kernel, mode='same')
 
     if DEMO_MODE:
-        axs[1].imshow(intensities, cmap='gray') #type: ignore
-        axs[1].axis('off') #type: ignore
-        axs[1].set_title("Fluorophore image after PSF") #type: ignore
+        axs[axs_index].imshow(intensities, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Fluorophore image after PSF") #type: ignore
+        axs_index += 1 #type: ignore
 
     if verbose:
         print("Simulating shot noise...")
     image = get_digital_signal(intensities=intensities,
                                config=config)
     if DEMO_MODE:
-        axs[2].imshow(image, cmap='gray') #type: ignore
-        axs[2].axis('off') #type: ignore
-        axs[2].set_title("Image after Shot Noise") #type: ignore
+        axs[axs_index].imshow(image, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Image after Shot Noise") #type: ignore
+        axs_index += 1 #type: ignore
 
     if verbose:
         print("Quantizing intensities...")
     image = quantize_intensities(image=image,
                                  config=config)
     if DEMO_MODE:
-        axs[3].imshow(image, cmap='gray') #type: ignore
-        axs[3].axis('off') #type: ignore
-        axs[3].set_title("Image after Quantization") #type: ignore
+        axs[axs_index].imshow(image, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Image after Quantization") #type: ignore
+        axs_index += 1 #type: ignore
 
     if DEMO_MODE:
-        axs[4].imshow(label, cmap='gray') #type: ignore
-        axs[4].axis('off') #type: ignore
-        axs[4].set_title("Label Segmentation") #type: ignore
+        axs[axs_index].imshow(label, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Label Segmentation") #type: ignore
+        axs_index += 1 #type: ignore
 
     if DEMO_MODE:
         colored_label = np.tile(label[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
+        colored_label[:, :, 0] = 1.
         colored_label[:, :, 1] = 0.
         colored_label[:, :, 2] = 0.
-        for i in range(colored_label.shape[0]):
-            for j in range(colored_label.shape[1]):
-                if colored_label[i,j,0] == 0.:
-                    colored_label[i,j,3] = 0.
+        # for i in range(colored_label.shape[0]):
+        #     for j in range(colored_label.shape[1]):
+        #         if colored_label[i,j,0] == 0.:
+        #             colored_label[i,j,3] = 0.
 
-        axs[5].imshow(colored_label) #type: ignore
-
-        axs[5].imshow(image, cmap='gray', alpha=0.5) #type: ignore
-        axs[5].axis('off') #type: ignore
-        axs[5].set_title("Label Segmentation Overlaid") #type: ignore
+        axs[axs_index].imshow(colored_label) #type: ignore
+        axs[axs_index].imshow(image, cmap='gray', alpha=0.5) #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Label Segmentation Overlaid") #type: ignore
+        axs_index += 1 #type: ignore
 
     if DEMO_MODE:
         plt.tight_layout()
@@ -274,9 +281,9 @@ if __name__ == '__main__':
 
 # To run the demo:
 # ----------------
-# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 
-
-
+# python3 generate.py DEMO /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 273
+# 
+#
 # To run on local:
 # ----------------
 # python3 generate.py /Users/karan/MTData/Synthetic_new_run /Users/karan/MTData/tubulaton-run/ /Users/karan/microsegmentation/generation/generate_config.json5 

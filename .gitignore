@@ -7,15 +7,17 @@ machine.file.*
 *.out
 .venv_*/
 
-ResearchLeads.md
-Tasks.md
-
 JupyterNotebooks/
-Papers/
-Models/
-job_templates/
 legacy_resnet_code/
 Sandbox.ipynb
 sandbox.py
-
 *_DEPRECATED.py
+
+Models/
+demos/
+runs/
+
+job_templates/
+Papers/
+ResearchLeads.md
+Tasks.md
