@@ -22,7 +22,6 @@ from unet import UNet
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
 from synthetic_dataset import Labels
-from demo import log_demo
 from load import load_json5_config
 from device import get_device
 
@@ -156,7 +155,6 @@ if __name__ == '__main__':
     scheduler_config = training_config['scheduler']
     scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
-
     for epoch in range(num_epochs):
         epoch_start_time = time.time()
 
@@ -205,18 +203,6 @@ if __name__ == '__main__':
                                       save_file_dir=save_file_dir,
                                       file_name_stem=save_file_name,
                                       verbose=True)
-
-
-    print("\nLogging demo of model to tensorboard...")
-    log_demo(writer=writer,
-             demo_config=demo_config,
-             model=model,
-             device=device,
-             patch_size=patch_size,
-             num_epochs=num_epochs,
-             verbose=True,
-             use_caching=True,
-             model_file_path=state_save_file_path)
 
     # Output time taken
 

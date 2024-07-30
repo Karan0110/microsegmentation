@@ -53,4 +53,12 @@
     "microtubules": {
         "depoly_displacement_std": 70.0,
     },
+
+    "depoly_proportion_distribution": {
+        "name": 'beta',
+        "params": {
+            'a': 5,
+            'b': 5,
+        }
+    }
 }

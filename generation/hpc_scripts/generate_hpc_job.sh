@@ -63,10 +63,19 @@ module load rhel8/default-icl              # REQUIRED - loads the basic environm
 #! Full path to application executable: 
 base_dir="/rds/user/ke330/hpc-work/microsegmentation/generation"
 source $base_dir/.venv_generation/bin/activate
-application="$base_dir/generate.sh"
+application="python3 $base_dir/generate.py"
 
 #! Run options for the application:
-options="hpc $SLURM_ARRAY_TASK_ID"
+base_dir="/rds/user/ke330/hpc-work"
+generate_dir="$base_dir/microsegmentation/generation"
+
+output_dir="$base_dir/SyntheticData/"
+tubulaton_output_path="$base_dir/tubulaton-run"
+config_file_path="$generate_dir/generate_config.json5"
+
+python_file_path="$generate_dir/generate.py"
+
+options="-o $output_dir -i $tubulaton_output_path -c $config_file_path -id $SLURM_ARRAY_TASK_ID --verbose --mode=overwrite"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory

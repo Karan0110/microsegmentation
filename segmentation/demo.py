@@ -79,47 +79,6 @@ def get_demo_file_paths(demo_config : dict) -> List[Tuple[Path, Union[Path, None
 
     return demo_file_paths
 
-def log_demo(writer : SummaryWriter,
-             demo_config : dict, 
-             model : nn.Module,
-             device : torch.device,
-             patch_size : int,
-             num_epochs : int,
-             verbose : bool = False,
-             use_caching : bool = False,
-             model_file_path : Union[Path, None] = None) -> None:
-    demo_file_paths = get_demo_file_paths(demo_config=demo_config)
-
-    if verbose:
-        print()
-    for demo_index, demo_file_path_pair in enumerate(demo_file_paths):
-        image_file_path, label_file_path = demo_file_path_pair
-
-        if verbose: 
-            print(f"Generating demo #{demo_index+1} (Image: {image_file_path})...")
-
-        image, label, segmentation, hard_segmentation = get_demo_information(model=model,
-                                                                             device=device,
-                                                                             demo_config=demo_config,
-                                                                             image_file_path=image_file_path,
-                                                                             label_file_path=label_file_path,
-                                                                             patch_size=patch_size,
-                                                                             verbose=False,
-                                                                             use_caching=use_caching,
-                                                                             model_file_path=model_file_path)
-
-        writer.add_image(f'images/image_{demo_index+1}', image, global_step=num_epochs, dataformats='HW')
-        if label_file_path is not None:
-            writer.add_image(f'ground_truths/ground_truth_{demo_index+1}', label, global_step=num_epochs, dataformats='HW') #type: ignore
-
-        writer.add_image(f'soft_segmentations/segmentation_{demo_index+1}', segmentation, global_step=num_epochs, dataformats='HW')
-        writer.add_image(f'hard_segmentations/segmentation_{demo_index+1}', hard_segmentation, global_step=num_epochs, dataformats='HW')
-        
-        writer.add_histogram(f'segmentation_histograms/histogram_{demo_index+1}', segmentation, global_step=num_epochs)
-
-    if verbose:
-        print()
-
 def get_colored_image(image : np.ndarray,
                       color : Tuple[float, float, float] = (1., 0., 0.)) -> np.ndarray:
     np_color = np.array(color)

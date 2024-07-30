@@ -13,9 +13,10 @@ def visualize(points : np.ndarray,
               background_color : Union[str, None] = None) -> None:
     num_points = points.shape[0]
 
-    if sample_size is not None:
+    if sample_size is not None and sample_size <= num_points:
         indices = random.sample(range(num_points), sample_size)
         points = points[indices]
+
 
     # Separate the points into x, y, and z coordinates
     x = points[:, 0]
