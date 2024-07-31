@@ -1,8 +1,8 @@
 {
     "model_dir": "/Users/karan/microsegmentation/Models/",
 
-    "batches_per_epoch": 500, //TESTING null
-    "batches_per_test": 100, //TESTING null
+    "batches_per_epoch": 300, //TESTING null
+    "batches_per_test": 50, //TESTING null
     "batch_size": 1, 
 
     "train_test_split": 0.8,
@@ -24,8 +24,8 @@
         "params": {
             //Calculated "manually" in python notebook. If this is the right way to go, make the calculation automatic.
             "weight": {
-                "POLYMERIZED": 0.9478,
-                "DEPOLYMERIZED": 0.0522,
+                "POLYMERIZED": 1.0, //0.9478,
+                "DEPOLYMERIZED": 1.0, //0.0522,
             },
         },
     },

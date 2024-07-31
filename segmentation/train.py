@@ -1,9 +1,3 @@
-# Command line arguments
-# dataset_dir       : Path to dataset folder
-# save_dir          : Path to model folder
-# save_file_name    : Name of save file (without .pth)
-# patch_size (=256) : A unique ID for the data sample
-
 import os
 from pathlib import Path
 import argparse
@@ -16,78 +10,18 @@ import shutil
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import Optimizer
 
 from torch.utils.tensorboard import SummaryWriter
 
 from unet import UNet
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
-from synthetic_dataset import Labels
-from load import load_json5_config
+from loss import get_criterion
+
 from device import get_device
+from file_io import load_json5_config, get_model_save_file_paths, save_model
 
-def get_save_file_paths(model_dir : Path,
-                        model_name : str) -> Tuple[Path, Path]:
-    state_save_file_path = model_dir / model_name / f"{model_name}.pth"
-    config_save_file_path = model_dir / model_name / f"config.json5"
-
-    return state_save_file_path, config_save_file_path
-
-def save_model(model : nn.Module,
-               optimizer : Optimizer,
-               scheduler : Any,
-               model_config : dict,
-               training_config : dict,
-               augmentation_config : dict,
-               training_data_config : dict,
-               model_dir : Path, 
-               model_name : str,
-               epoch : int,
-               verbose : bool = False) -> Path:
-    model_state = {
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'scheduler': scheduler.state_dict(),
-    }
-
-    state_save_file_path, config_save_file_path = get_save_file_paths(model_dir=model_dir,
-                                                                      model_name=model_name)
-
-    os.makedirs(state_save_file_path.parent, exist_ok=True)
-    os.makedirs(config_save_file_path.parent, exist_ok=True)
-
-    try:
-        # Save the model state
-        torch.save(model_state, state_save_file_path)
-        
-        # Save the configuration
-        with config_save_file_path.open('w') as f:
-            json5.dump({
-                'epoch': epoch,
-                'model': model_config,
-                'training': training_config,
-                'training_data': training_data_config,
-                'augmentation': augmentation_config,
-            }, f, indent=4)
-    except KeyboardInterrupt:
-        # Handle the keyboard interrupt or any cleanup here if necessary
-        if verbose:
-            print("Training interrupted midway through saving results.")
-        # You may optionally delete the partially saved files here if appropriate
-        if state_save_file_path.exists():
-            state_save_file_path.unlink()
-        if config_save_file_path.exists():
-            config_save_file_path.unlink()
-        raise
-
-    if verbose:
-        print(f"Saved model to {state_save_file_path}.")
-        print(f"Saved model config to {config_save_file_path}.")
-    
-    return state_save_file_path
-
-def get_model_criterion_optimizer_scheduler(model_config : dict,
+def create_model_criterion_optimizer_scheduler(model_config : dict,
                                             training_config : dict,
                                             device : torch.device,
                                             verbose : bool) -> Tuple[nn.Module,  nn.Module, optim.SGD, Any]:
@@ -104,21 +38,8 @@ def get_model_criterion_optimizer_scheduler(model_config : dict,
                  padding_mode=convolution_padding_mode).to(device)
 
     loss_config = training_config['loss']
-    loss_name = loss_config['name']
-
-    raw_loss_params = loss_config['params']
-    new_loss_params = raw_loss_params.copy()
-
-    if loss_name == 'CrossEntropyLoss':
-        raw_class_weights = raw_loss_params['weight']
-        class_weights = [None] * len(Labels)
-        for label_str in raw_class_weights:
-            index = Labels[label_str].value
-            class_weights[index] = raw_class_weights[label_str]
-        new_loss_params['weight'] = torch.tensor(class_weights).to(device)
-
-    LossFunction = getattr(nn, loss_name)
-    criterion = LossFunction(**new_loss_params)
+    criterion = get_criterion(loss_config=loss_config,
+                              device=device)
 
     optimizer_config = training_config['optimizer']
     optimizer = optim.SGD(model.parameters(), **optimizer_config)
@@ -139,13 +60,17 @@ if __name__ == '__main__':
     # Positional argument (mandatory)
     parser.add_argument('-c', '--config', 
                         type=Path, 
-                        required=True,
-                        help='Config Directory')
+                        help='Config Directory (If not in overwrite mode, program uses a pre-existing config if it exists)')
 
     parser.add_argument('-n', '--name',
                         type=str,
                         required=True,
                         help="Model name (continues training any pre-existing model)")
+
+    parser.add_argument('-md', '--modeldir',
+                        type=Path,
+                        required=True,
+                        help="Model directory")
     
     parser.add_argument('-e', '--epochs',
                         type=int,
@@ -169,22 +94,38 @@ if __name__ == '__main__':
     # Overwrite mode CL arg
     overwrite_mode = args.overwrite
 
+    # Load config files from local directory or model if we are using checkpoint
+    model_name = args.name
+    model_dir = args.modeldir
+
+    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
+                                                                            model_name=model_name)
+
     # Load the config files
     config_dir = args.config
 
-    training_config = load_json5_config(config_dir / 'training-config.json5')
-    training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
-    augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
-    model_config = load_json5_config(config_dir / 'model-config.json5')
+    if config_save_file_path.exists() and (not overwrite_mode):
+        if verbose:
+            print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
+
+        config = load_json5_config(config_save_file_path)
+
+        training_config = config['training']
+        training_data_config = config['training_data']
+        augmentation_config = config['augmentation']
+        model_config = config['model']
+    else:
+        print(f"\nUsing config files in {config_dir}...")
+
+        training_config = load_json5_config(config_dir / 'training-config.json5')
+        training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
+        augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
+        model_config = load_json5_config(config_dir / 'model-config.json5')
 
     # Prepare directories for reading/writing
-    model_name = args.name
-
     dataset_dir = Path(training_data_config['dataset_dir'])
-    model_dir = Path(training_config['model_dir']) 
 
     # Set up TensorBoard writer
-
     writer = SummaryWriter(f"runs/{model_name}")
 
     # Set up device
@@ -216,20 +157,17 @@ if __name__ == '__main__':
 
     # Initialize model, loss function, optimizer, and scheduler
 
-    model, criterion, optimizer, scheduler = get_model_criterion_optimizer_scheduler(model_config=model_config,
-                                                                                     training_config=training_config,
-                                                                                     device=device,
-                                                                                     verbose=verbose)
-    start_epoch : int                                                                                
+    model, criterion, optimizer, scheduler = create_model_criterion_optimizer_scheduler(model_config=model_config,
+                                                                                        training_config=training_config,
+                                                                                        device=device,
+                                                                                        verbose=verbose)
 
-    # Check if model is pre-existing, if so continue working on it
-
-    state_save_file_path, config_save_file_path = get_save_file_paths(model_dir=model_dir,
-                                                                      model_name=model_name)
+    # Check if savefile exists: if so, continue training from checkpoint
                             
+    start_epoch : int
     if state_save_file_path.exists():
         if verbose:
-            print(f"Model {model_name} savefile found.")
+            print(f"\nModel {model_name} savefile found.")
         if not overwrite_mode:
             if verbose:
                 print(f"Continuing training of this model from its config file...")

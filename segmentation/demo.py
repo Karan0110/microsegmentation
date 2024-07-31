@@ -1,8 +1,9 @@
 from pathlib import Path
 import os
 import random
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Optional
 import json5
+import argparse
 import sys
 
 import numpy as np
@@ -13,10 +14,9 @@ from PIL import Image
 
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
 
 from inference import get_segmentation, get_hard_segmentation
-from load import load_json5_config, load_model
+from file_io import load_json5_config, load_model, get_model_save_file_paths
 from device import get_device
 
 def load_grayscale_image(image_file_path : Path) -> np.ndarray:
@@ -31,7 +31,8 @@ def get_demo_information(model : nn.Module,
                          image_file_path : Path,
                          label_file_path : Union[Path, None],
                          patch_size : int,
-                         verbose : bool = False,
+                         verbose : bool,
+                         hard_segmentation_threshold : float,
                          use_caching : bool = False,
                          model_file_path : Union[Path, None] = None) -> Tuple[np.ndarray, Union[np.ndarray, None], np.ndarray, np.ndarray]:
     image = load_grayscale_image(image_file_path=image_file_path)
@@ -48,10 +49,8 @@ def get_demo_information(model : nn.Module,
                                     image_file_path=image_file_path,
                                     model_file_path=model_file_path)
 
-    segmentation_threshold : float = demo_config['hard_segmentation_threshold']
-
     hard_segmentation = get_hard_segmentation(segmentation=segmentation,
-                                                segmentation_threshold=segmentation_threshold)
+                                              segmentation_threshold=hard_segmentation_threshold) #type: ignore
 
     return (image, label, segmentation, hard_segmentation)
 
@@ -96,10 +95,11 @@ def plot_demo(demo_config : dict,
               model_file_path : Path,
               image_file_path : Path,
               label_file_path : Union[Path, None],
+              save_to_file : bool,
               verbose : bool = True,
-              save_file_path : Union[Path, None] = None) -> None:
+              save_file_dir : Union[Path, None] = None) -> None:
     if verbose:
-        print(f"Showing demo of model: {model_file_path} on image:")
+        print(f"\nShowing demo of model: {model_file_path} on image:")
         print(f"{image_file_path}")
 
     image, label, segmentation, hard_segmentation = get_demo_information(model=model,
@@ -108,6 +108,7 @@ def plot_demo(demo_config : dict,
                                                                          image_file_path=image_file_path,
                                                                          label_file_path=label_file_path,
                                                                          patch_size=patch_size,
+                                                                         hard_segmentation_threshold=hard_segmentation_threshold,
                                                                          verbose=False,
                                                                          use_caching=True,
                                                                          model_file_path=model_file_path)
@@ -134,7 +135,7 @@ def plot_demo(demo_config : dict,
 
     axs[axs_index].imshow(hard_segmentation, cmap='gray') #type: ignore
     axs[axs_index].axis('off') #type: ignore
-    axs[axs_index].set_title("Hard Segmentation") #type: ignore
+    axs[axs_index].set_title(f"Hard Segmentation\n(Threshold {hard_segmentation_threshold})") #type: ignore
     axs_index += 1 #type: ignore
 
     colored_hard_segmentation = get_colored_image(hard_segmentation)
@@ -157,57 +158,109 @@ def plot_demo(demo_config : dict,
         axs[axs_index].set_title("Ground Truth Overlaid") #type: ignore
         axs_index += 1 #type: ignore
 
-    if save_file_path is None:
-        plt.show()
-    else:
-        plt.savefig(save_file_path, format='png')
+    if save_to_file:
+        if save_file_dir is None:
+            raise ValueError(f"No save file dir provided!")
+
+        save_file_path = save_file_dir / f"DEMO_{image_file_path.stem}.png"
+ 
+        plt.savefig(save_file_path, 
+                    format='png',
+                    dpi=500)
         if verbose:
-            print(f"Saved demo to {save_file_path}\n")
+            print(f"\nSaved demo to {save_file_path}")
+    else:
+        plt.show()
+
+    # Show histogram of segmentation probabilities
+    plt.clf()
+    plt.cla()
+
+    plt.hist(segmentation.flatten(), bins=30)
+
+    if save_to_file:
+        if save_file_dir is None:
+            raise ValueError(f"No save file dir provided!")
+
+        save_file_path = save_file_dir / f"PROB_HIST_{image_file_path.stem}.png"
+ 
+        plt.savefig(save_file_path, 
+                    format='png',
+                    dpi=500)
+        if verbose:
+            print(f"Saved probability histogram to {save_file_path}")
+    else:
+        plt.show()
+
 
 if __name__ == '__main__':
-    # Validate command line arguments
-    if (len(sys.argv)-1) not in [1,]:
-        print("Too few / many command-line arguments!")
-        print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [demo_config_path]")
-        exit(1)
+    # Parse CL arguments
+    parser = argparse.ArgumentParser(
+        description="Demonstrate trained U-Net model."
+    )
+
+    # Positional argument (mandatory)
+    parser.add_argument('-c', '--config', 
+                        type=Path, 
+                        required=True,
+                        help='Config File Path')
+
+    parser.add_argument('-n', '--name',
+                        type=str,
+                        required=True,
+                        help="Model name")
+
+    parser.add_argument('-t', '--threshold',
+                        type=float,
+                        help="Threshold for hard segmentation (Else use default value in config file)")
+
+    parser.add_argument('-v', '--verbose', 
+                        action='store_true', 
+                        help='Increase output verbosity')
+
+    parser.add_argument('--show', 
+                        action='store_true', 
+                        help='Show demos in window instead of saving to files')
+
+    args = parser.parse_args()
+
+    verbose = args.verbose
+
+    show_mode = args.show
 
     #  Load the demo config file
-    demo_config_file_path = Path(sys.argv[1])
+    demo_config_file_path = args.config
     demo_config = load_json5_config(demo_config_file_path)
 
-    model_file_path = Path(demo_config['model_file_path'])
+    model_name = args.name
+    model_dir = Path(demo_config['model_dir'])
 
-    model_config_file_path : Union[Path, None]
-    raw_model_config_file_path = demo_config['model_config_file_path']
-    if raw_model_config_file_path is None:
-        model_config_file_path = None
-    else:
-        model_config_file_path = Path(raw_model_config_file_path)
+    # hard segmentation threshold
+    hard_segmentation_threshold = args.threshold
+    if hard_segmentation_threshold is None:
+        hard_segmentation_threshold = float(demo_config['hard_segmentation_threshold'])
 
-    demo_save_dir = Path(demo_config['demo_save_dir']) / model_file_path.stem
+    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
+                                                                            model_name=model_name)
+
+    demo_save_dir = Path(demo_config['demo_save_dir']) / model_name
     os.makedirs(demo_save_dir, exist_ok=True)
 
-    model, model_config = load_model(model_file_path=model_file_path,
-                                     model_config_file_path=model_config_file_path)
+    model, model_config = load_model(model_file_path=state_save_file_path,
+                                     config_file_path=config_save_file_path)
     patch_size = model_config['patch_size']
-    device = get_device(verbose=True)
+    device = get_device(verbose=verbose)
 
     demo_file_paths = get_demo_file_paths(demo_config=demo_config)
 
     for image_file_path, label_file_path in demo_file_paths:
-        demo_save_file_path = demo_save_dir / f"DEMO_{image_file_path.stem}.png"
-
         plot_demo(demo_config=demo_config,
                 model=model,
                 device=device,
                 patch_size=patch_size,
-                model_file_path=model_file_path,
+                model_file_path=state_save_file_path,
                 image_file_path=image_file_path,
                 label_file_path=label_file_path,
-                verbose=True,
-                save_file_path=demo_save_file_path)
-
-
-# DEMO (v2):
-# python3 demo.py demo-config.json5 
+                save_file_dir=demo_save_dir,
+                verbose=verbose,
+                save_to_file=(not show_mode))

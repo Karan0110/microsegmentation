@@ -381,7 +381,9 @@ if __name__ == '__main__':
 
                 demo_save_file_path = output_dir / f"DEMO_{tubulaton_output_file_path.stem}.png"
 
-                plt.savefig(demo_save_file_path)
+                plt.savefig(demo_save_file_path,
+                            format='png',
+                            dpi=500)
 
                 if verbose:
                     print(f"Saved demo to {demo_save_file_path}")

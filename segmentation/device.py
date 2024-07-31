@@ -13,6 +13,6 @@ def get_device(verbose : bool) -> torch.device:
         device_name = 'CPU'
 
     if verbose:
-        print(f"Using device: {device_name}")
+        print(f"\nUsing device: {device_name}")
 
     return device
