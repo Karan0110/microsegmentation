@@ -161,22 +161,3 @@ def get_data_loaders(base_dir : Path,
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     return train_loader, test_loader
-
-#TODO - ask ChatGPT to list these again with all the tunable params listed
-#     transform = A.Compose([
-#     A.RandomRotate90(p=0.5),
-#     A.HorizontalFlip(p=0.5),
-#     A.VerticalFlip(p=0.5),
-#     A.Transpose(p=0.5),
-#     A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5),
-#     A.GridDistortion(p=0.5),
-#     A.OpticalDistortion(distort_limit=0.2, shift_limit=0.2, p=0.5),
-#     A.ElasticTransform(p=0.5),
-#     A.GaussNoise(p=0.2),
-#     A.MotionBlur(p=0.2),
-#     A.MedianBlur(blur_limit=3, p=0.1),
-#     A.Blur(blur_limit=3, p=0.1),
-#     A.RandomBrightnessContrast(p=0.2),
-#     A.HueSaturationValue(p=0.2),
-#     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-# ])

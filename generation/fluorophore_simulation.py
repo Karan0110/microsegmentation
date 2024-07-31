@@ -28,6 +28,10 @@ def get_mt_points(file_path : Path,
     # TODO - this uses the "identite" attribute, which will be deprecated soon
     # This could cause errors if we run tubulaton on a fixed version
     mt_ids_array = polydata.GetPointData().GetArray("identite")
+
+    if mt_ids_array is None:
+        return np.zeros((0, 3)), np.zeros((0,), dtype=int)
+
     mt_ids = np.array([mt_ids_array.GetValue(i) for i in range(mt_ids_array.GetNumberOfTuples())])
     
     return points_array, mt_ids

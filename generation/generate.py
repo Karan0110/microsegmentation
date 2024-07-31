@@ -39,6 +39,14 @@ def generate(tubulaton_output_file_path : Path,
         print(f"Loading MT points from {tubulaton_output_file_path} to numpy array...")
     mt_points, mt_ids = get_mt_points(file_path=tubulaton_output_file_path,
                                       config=config)
+
+    #TODO - It shouldn't really cause issues if no MTs, even though this shouldn't happen if everything went right (But this is a temporary fix)
+    if mt_points.shape[0] == 0:
+        image = np.zeros((512,512))
+        label = np.zeros((512,512))
+        return image, label
+    #TODO END
+
     unique_mt_ids = np.unique(mt_ids)
 
     if mode == 'demo_interactive':

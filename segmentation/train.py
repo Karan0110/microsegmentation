@@ -5,16 +5,18 @@
 # patch_size (=256) : A unique ID for the data sample
 
 import os
-import sys
 from pathlib import Path
+import argparse
 import json5
-import pickle
 import time
+from typing import Iterable, Tuple, Any
+import itertools
+import shutil
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import Optimizer, lr_scheduler
+from torch.optim import Optimizer
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -25,13 +27,23 @@ from synthetic_dataset import Labels
 from load import load_json5_config
 from device import get_device
 
+def get_save_file_paths(model_dir : Path,
+                        model_name : str) -> Tuple[Path, Path]:
+    state_save_file_path = model_dir / model_name / f"{model_name}.pth"
+    config_save_file_path = model_dir / model_name / f"config.json5"
+
+    return state_save_file_path, config_save_file_path
+
 def save_model(model : nn.Module,
                optimizer : Optimizer,
-               scheduler : lr_scheduler._LRScheduler,
+               scheduler : Any,
                model_config : dict,
                training_config : dict,
-               save_file_dir : Path, 
-               file_name_stem : str,
+               augmentation_config : dict,
+               training_data_config : dict,
+               model_dir : Path, 
+               model_name : str,
+               epoch : int,
                verbose : bool = False) -> Path:
     model_state = {
         'state_dict': model.state_dict(),
@@ -39,19 +51,35 @@ def save_model(model : nn.Module,
         'scheduler': scheduler.state_dict(),
     }
 
-    os.makedirs(save_file_dir, exist_ok=True)
-    os.makedirs(save_file_dir / 'model_config', exist_ok=True)
+    state_save_file_path, config_save_file_path = get_save_file_paths(model_dir=model_dir,
+                                                                      model_name=model_name)
 
-    state_save_file_path = save_file_dir / f"{file_name_stem}.pth"
-    config_save_file_path = save_file_dir / 'model_config' / f"{file_name_stem}_config.pkl"
+    os.makedirs(state_save_file_path.parent, exist_ok=True)
+    os.makedirs(config_save_file_path.parent, exist_ok=True)
 
-    torch.save(model_state,
-                f=state_save_file_path)
-    with config_save_file_path.open('wb') as f:
-        pickle.dump({
-            'model': model_config,
-            'training': training_config,
-        }, f)
+    try:
+        # Save the model state
+        torch.save(model_state, state_save_file_path)
+        
+        # Save the configuration
+        with config_save_file_path.open('w') as f:
+            json5.dump({
+                'epoch': epoch,
+                'model': model_config,
+                'training': training_config,
+                'training_data': training_data_config,
+                'augmentation': augmentation_config,
+            }, f, indent=4)
+    except KeyboardInterrupt:
+        # Handle the keyboard interrupt or any cleanup here if necessary
+        if verbose:
+            print("Training interrupted midway through saving results.")
+        # You may optionally delete the partially saved files here if appropriate
+        if state_save_file_path.exists():
+            state_save_file_path.unlink()
+        if config_save_file_path.exists():
+            config_save_file_path.unlink()
+        raise
 
     if verbose:
         print(f"Saved model to {state_save_file_path}.")
@@ -59,38 +87,108 @@ def save_model(model : nn.Module,
     
     return state_save_file_path
 
+def get_model_criterion_optimizer_scheduler(model_config : dict,
+                                            training_config : dict,
+                                            device : torch.device,
+                                            verbose : bool) -> Tuple[nn.Module,  nn.Module, optim.SGD, Any]:
+    depth = model_config['depth']
+    in_channels = model_config['in_channels']
+    out_channels = model_config['out_channels']
+    base_channel_num = model_config['base_channel_num']
+    convolution_padding_mode = model_config['convolution_padding_mode']
+
+    model = UNet(depth=depth,
+                 base_channel_num=base_channel_num,
+                 in_channels=in_channels,
+                 out_channels=out_channels,
+                 padding_mode=convolution_padding_mode).to(device)
+
+    loss_config = training_config['loss']
+    loss_name = loss_config['name']
+
+    raw_loss_params = loss_config['params']
+    new_loss_params = raw_loss_params.copy()
+
+    if loss_name == 'CrossEntropyLoss':
+        raw_class_weights = raw_loss_params['weight']
+        class_weights = [None] * len(Labels)
+        for label_str in raw_class_weights:
+            index = Labels[label_str].value
+            class_weights[index] = raw_class_weights[label_str]
+        new_loss_params['weight'] = torch.tensor(class_weights).to(device)
+
+    LossFunction = getattr(nn, loss_name)
+    criterion = LossFunction(**new_loss_params)
+
+    optimizer_config = training_config['optimizer']
+    optimizer = optim.SGD(model.parameters(), **optimizer_config)
+
+    scheduler_config = training_config['scheduler']
+    scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
+
+    return model, criterion, optimizer, scheduler
+
 if __name__ == '__main__':
     start_time = time.time()
 
-    # Validate command line arguments
-    if (len(sys.argv)-1) not in [1,2]:
-        print("Too few / many command-line arguments!")
-        print("Correct usage of program:")
-        print(f"python3 {sys.argv[0]} [config_dir] <save_file_name>")
-        print("Where default name for model save file is \"model\"")
-        exit(1)
+    # Parse CL arguments
+    parser = argparse.ArgumentParser(
+        description="Train U-Net model on synthetic training data."
+    )
+
+    # Positional argument (mandatory)
+    parser.add_argument('-c', '--config', 
+                        type=Path, 
+                        required=True,
+                        help='Config Directory')
+
+    parser.add_argument('-n', '--name',
+                        type=str,
+                        required=True,
+                        help="Model name (continues training any pre-existing model)")
+    
+    parser.add_argument('-e', '--epochs',
+                        type=int,
+                        help="Number of epochs (Leave blank to continue until KeyboardInterrupt)")
+
+    parser.add_argument('-v', '--verbose', 
+                        action='store_true', 
+                        help='Increase output verbosity')
+
+    parser.add_argument('--overwrite', 
+                        action='store_true', 
+                        help='Overwrite saved model, if it exists')
+
+    args = parser.parse_args()
+
+    # python3 train.py -c config/ -n model-v3-test -e 5 -v 
+
+    # Verbose CL arg
+    verbose = args.verbose
+
+    # Overwrite mode CL arg
+    overwrite_mode = args.overwrite
 
     # Load the config files
-    config_dir = Path(sys.argv[1])
+    config_dir = args.config
 
     training_config = load_json5_config(config_dir / 'training-config.json5')
     training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
     augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
-    demo_config = load_json5_config(config_dir / 'demo-config.json5')
     model_config = load_json5_config(config_dir / 'model-config.json5')
 
     # Prepare directories for reading/writing
-    save_file_name = sys.argv[2] if (len(sys.argv)-1) == 2 else "model"
+    model_name = args.name
 
     dataset_dir = Path(training_data_config['dataset_dir'])
-    save_file_dir = Path(training_config['save_file_dir']) 
+    model_dir = Path(training_config['model_dir']) 
 
-    os.makedirs(save_file_dir, exist_ok=True)
+    # Set up TensorBoard writer
 
-    writer = SummaryWriter(f"runs/{save_file_name}")
+    writer = SummaryWriter(f"runs/{model_name}")
 
     # Set up device
-    device : torch.device = get_device(verbose=True)
+    device : torch.device = get_device(verbose=verbose)
 
     # Set up data loaders
 
@@ -118,98 +216,115 @@ if __name__ == '__main__':
 
     # Initialize model, loss function, optimizer, and scheduler
 
-    depth = model_config['depth']
-    in_channels = model_config['in_channels']
-    out_channels = model_config['out_channels']
-    base_channel_num = model_config['base_channel_num']
-    convolution_padding_mode = model_config['convolution_padding_mode']
+    model, criterion, optimizer, scheduler = get_model_criterion_optimizer_scheduler(model_config=model_config,
+                                                                                     training_config=training_config,
+                                                                                     device=device,
+                                                                                     verbose=verbose)
+    start_epoch : int                                                                                
 
-    num_epochs = training_config['num_epochs']
+    # Check if model is pre-existing, if so continue working on it
 
-    model = UNet(depth=depth,
-                 base_channel_num=base_channel_num,
-                 in_channels=in_channels,
-                 out_channels=out_channels,
-                 padding_mode=convolution_padding_mode).to(device)
+    state_save_file_path, config_save_file_path = get_save_file_paths(model_dir=model_dir,
+                                                                      model_name=model_name)
+                            
+    if state_save_file_path.exists():
+        if verbose:
+            print(f"Model {model_name} savefile found.")
+        if not overwrite_mode:
+            if verbose:
+                print(f"Continuing training of this model from its config file...")
+            
+            checkpoint = torch.load(state_save_file_path, 
+                                    weights_only=True) #safety feature
 
-    loss_config = training_config['loss']
-    loss_name = loss_config['name']
-    loss_params = loss_config['params']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            scheduler.load_state_dict(checkpoint['scheduler'])
 
-    if loss_name == 'CrossEntropyLoss':
-        raw_class_weights = loss_params['weight']
-        class_weights = [None] * len(Labels)
-        for label_str in raw_class_weights:
-            index = Labels[label_str].value
-            class_weights[index] = raw_class_weights[label_str]
-        loss_params['weight'] = torch.tensor(class_weights).to(device)
+            with open(config_save_file_path, 'r') as config_save_file:
+                config = json5.load(config_save_file)
+                start_epoch = config['epoch'] + 1 #type: ignore
+        else:
+            if verbose:
+                print(f"Overwriting savefile with new run...")
 
-    LossFunction = getattr(nn, loss_name)
-    criterion = LossFunction(**loss_params)
+            # Delete tensorboard logs
+            shutil.rmtree(writer.log_dir)
+            os.makedirs(writer.log_dir, exist_ok=True)
+
+            # Delete pre-existing model files
+            os.remove(state_save_file_path)
+            os.remove(config_save_file_path)
+
+            start_epoch = 1
+    else:
+        # Delete any old tensorboard logs
+        shutil.rmtree(writer.log_dir)
+        os.makedirs(writer.log_dir, exist_ok=True)
+
+        start_epoch = 1
 
     # Training and testing loop
 
-    optimizer_config = training_config['optimizer']
-    optimizer = optim.SGD(model.parameters(), **optimizer_config)
+    num_epochs = args.epochs
 
-    scheduler_config = training_config['scheduler']
-    scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
+    epoch_iterator : Iterable
+    if num_epochs is not None:
+        epoch_iterator = range(start_epoch, start_epoch+num_epochs)
+    else:
+        epoch_iterator = itertools.count(start=start_epoch)
+    for epoch in epoch_iterator:
+        try:
+            epoch_start_time = time.time()
 
-    for epoch in range(num_epochs):
-        epoch_start_time = time.time()
+            print(f"\nEpoch {epoch}")
+            print('-'*15 + '\n')
 
-        print(f"\nEpoch {epoch}")
-        print('-'*15 + '\n')
+            train_model(model=model,
+                        device=device,
+                        writer=writer,
+                        train_loader=train_loader,
+                        criterion=criterion,
+                        optimizer=optimizer,
+                        epoch=epoch,
+                        num_batches=batches_per_epoch,
+                        verbose=verbose)
 
-        train_model(model=model,
-                    device=device,
-                    writer=writer,
-                    train_loader=train_loader,
-                    criterion=criterion,
+            test_model(model=model, 
+                       device=device, 
+                       writer=writer,
+                       epoch=epoch,
+                       patch_size=patch_size,
+                       test_loader=test_loader, 
+                       criterion=criterion,
+                       num_batches=batches_per_test,
+                       verbose=verbose)
+                    
+            scheduler.step()
+
+            save_model(model=model,
                     optimizer=optimizer,
+                    scheduler=scheduler, 
+                    model_config=model_config,
+                    training_config=training_config,
+                    augmentation_config=augmentation_config,
+                    training_data_config=training_data_config,
+                    model_dir = model_dir,
+                    model_name=model_name,
                     epoch=epoch,
-                    num_batches=batches_per_epoch,
-                    verbose=True)
+                    verbose=verbose)
 
-        test_model(model=model, 
-                   device=device, 
-                   writer=writer,
-                   epoch=epoch,
-                   patch_size=patch_size,
-                   test_loader=test_loader, 
-                   criterion=criterion,
-                   num_batches=batches_per_test,
-                   verbose=True)
-                   
-        scheduler.step()
-
-        save_model(model=model,
-                   optimizer=optimizer,
-                   scheduler=scheduler, #type: ignore
-                   model_config=model_config,
-                   training_config=training_config,
-                   save_file_dir=save_file_dir / save_file_name,
-                   file_name_stem=f"epoch_{epoch+1}",
-                   verbose=True)
-
-        print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
-
-    print("\nSaving final model to file...")
-    state_save_file_path = save_model(model=model,
-                                      optimizer=optimizer,
-                                      scheduler=scheduler, #type: ignore
-                                      model_config=model_config,
-                                      training_config=training_config,
-                                      save_file_dir=save_file_dir,
-                                      file_name_stem=save_file_name,
-                                      verbose=True)
+            print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
+        except KeyboardInterrupt:
+            print(f"Interrupted during epoch {epoch}.")
+            break
 
     # Output time taken
-
     time_taken = int(time.time() - start_time)
     seconds = time_taken % 60
     minutes = (time_taken // 60) % 60
     hours = time_taken // (60**2)
+
     print(f"\nTook {hours} hrs {minutes} min in total.")
 
     writer.close()

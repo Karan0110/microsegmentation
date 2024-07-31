@@ -1,5 +1,5 @@
 {
-    "dataset_dir": "/Users/karan/MTData/Synthetic",
+    "dataset_dir": "/Users/karan/MTData/Synthetic_CLEAN",
 
     "color_to_label": {
         "0": "DEPOLYMERIZED",
