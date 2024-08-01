@@ -18,13 +18,5 @@
 
     "loss": {
         "name": "FocalLoss",
-
-        "params": {
-            /*"alpha": {
-                "POLYMERIZED": 3.0, 
-                "DEPOLYMERIZED": 1.0, 
-            },*/
-            "gamma": 5.0,
-        },
     },
 }

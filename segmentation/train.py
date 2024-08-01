@@ -144,6 +144,8 @@ if __name__ == '__main__':
     # Set up device
     device : torch.device = get_device(verbose=verbose)
 
+    #CHECKPOINT - working till here!
+
     # Set up data loaders
 
     # TODO TESTING REMOVE THIS!!!

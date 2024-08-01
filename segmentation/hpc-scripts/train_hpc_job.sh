@@ -62,7 +62,7 @@ base_dir="/rds/user/ke330/hpc-work"
 segmentation_dir="$base_dir/microsegmentation/segmentation"
 
 source $segmentation_dir/.venv_segmentation/bin/activate
-application="python3 $segmentation_dir/train.py"
+application="python $segmentation_dir/train.py"
 
 #! Run options for the application:
 config_file_path="$segmentation_dir/config"
@@ -72,7 +72,7 @@ log_dir="$base_dir/runs"
 #! TODO TESTING
 epochs=5 #100
 
-options="--config $config_file_path --name $1 --datadir $data_dir --modeldir $model_dir --logdir $log_dir --epochs $epochs --verbose "
+options="--config $config_file_path --name $1 --datadir $data_dir --modeldir $model_dir --logdir $log_dir --epochs $epochs --verbose --overwrite"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
