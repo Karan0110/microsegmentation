@@ -166,7 +166,7 @@ def plot_demo(demo_config : dict,
  
         plt.savefig(save_file_path, 
                     format='png',
-                    dpi=500)
+                    dpi=800)
         if verbose:
             print(f"\nSaved demo to {save_file_path}")
     else:
@@ -184,9 +184,10 @@ def plot_demo(demo_config : dict,
 
         save_file_path = save_file_dir / f"PROB_HIST_{image_file_path.stem}.png"
  
+        dpi = demo_config['save_file_dpi']
         plt.savefig(save_file_path, 
                     format='png',
-                    dpi=500)
+                    dpi=dpi)
         if verbose:
             print(f"Saved probability histogram to {save_file_path}")
     else:

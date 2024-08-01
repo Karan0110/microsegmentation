@@ -15,6 +15,7 @@ sandbox.py
 
 Models/
 demos/
+Standard_Demo/
 runs/
 
 job_templates/

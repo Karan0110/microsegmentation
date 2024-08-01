@@ -67,6 +67,16 @@ if __name__ == '__main__':
                         required=True,
                         help="Model name (continues training any pre-existing model)")
 
+    parser.add_argument('-dd', '--datadir',
+                        type=Path,
+                        required=True,
+                        help="Training data directory")
+
+    parser.add_argument('-ld', '--logdir',
+                        type=Path,
+                        default="runs/",
+                        help="Log directory for TensorBoard (Default runs/)")
+
     parser.add_argument('-md', '--modeldir',
                         type=Path,
                         required=True,
@@ -115,18 +125,21 @@ if __name__ == '__main__':
         augmentation_config = config['augmentation']
         model_config = config['model']
     else:
-        print(f"\nUsing config files in {config_dir}...")
+        print(f"\nConfig files: {config_dir.absolute()}")
 
         training_config = load_json5_config(config_dir / 'training-config.json5')
         training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
         augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
         model_config = load_json5_config(config_dir / 'model-config.json5')
 
-    # Prepare directories for reading/writing
-    dataset_dir = Path(training_data_config['dataset_dir'])
-
     # Set up TensorBoard writer
-    writer = SummaryWriter(f"runs/{model_name}")
+    log_dir = args.logdir / f"{model_name}"
+    if verbose:
+        print(f"TensorBoard log dir: {log_dir}")
+    writer = SummaryWriter(log_dir)
+    
+    dataset_dir = args.datadir 
+    print(f"Training Data: {dataset_dir}")
 
     # Set up device
     device : torch.device = get_device(verbose=verbose)
@@ -268,3 +281,5 @@ if __name__ == '__main__':
     writer.close()
 
 # python3 train.py train-config.json5 augmentation-config.json5 model-v3
+# python3 train.py 
+# python train.py -c config/ --name model-TEST -dd /Users/karan/MTData/Synthetic_CLEAN -md /Users/karan/microsegmentation/Models --verbose --epoch 5 

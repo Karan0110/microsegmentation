@@ -9,7 +9,7 @@ import json5
 import time
 import random
 from pathlib import Path
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union, List
 import argparse
 import re
 
@@ -215,27 +215,35 @@ if __name__ == '__main__':
         description="Generate synthetic training data from tubulaton .vtk files."
     )
 
-    # Positional argument (mandatory)
-    parser.add_argument('-o', '--output', 
-                        type=str, 
-                        help='Output Path')
+    parser.add_argument('-od', '--output_dir', 
+                        type=Path, 
+                        help='Output Directory Path')
+
+    parser.add_argument('-on', '--output_name',
+                        type=str,
+                        help="Name of output file (Can only be specified if there is a single input file)")
 
     parser.add_argument('-i', '--input',
-                        type=str,
+                        type=Path,
                         help="Input Path (tubulaton .vtk file or directory of .vtk files)")
 
     parser.add_argument('-id', '--id',
                         type=str,
-                        help="Input file ID to run program on (Must supply a directory for --input)")
+                        help="Specify a single file ID to run program on (Must supply a directory for --input)")
 
     parser.add_argument('-c', '--config',
-                        type=str,
+                        type=Path,
+                        required=True,
                         help='Path to JSON5 config file')
 
     parser.add_argument('--num_files',
                         type=int,
                         help="""Number of .vtk files to generate synthetic data from (Only valid for directory input, not file input). 
                                 Files are randomly chosen. If omitted, all files in input directory are used.""")
+    
+    parser.add_argument("--depoly",
+                        type=float,
+                        help="The rate of depolymerization. Leave blank to draw a random value from the distribution specified in config")
 
     parser.add_argument('--mode', choices=['demo_interactive', 'demo_headless', 'overwrite', 'update'], 
                         default='update',
@@ -254,15 +262,12 @@ if __name__ == '__main__':
     mode = args.mode
     verbose = args.verbose
 
+    max_num_files = args.num_files
+    output_dir = args.output_dir
+    output_name = args.output_name
+
     tubulaton_output_path = Path(args.input)
     config_file_path = Path(args.config)
-
-    max_num_files = args.num_files
-
-    if args.output is not None:
-        output_dir = Path(args.output)
-    else:
-        output_dir = None
 
     file_id : Union[int, None]
     file_id = args.id
@@ -274,9 +279,12 @@ if __name__ == '__main__':
     if verbose:
         print(f"Loaded config file: {config_file_path}")
 
-    depoly_proportion_distribution_info = config['depoly_proportion_distribution']
-    depoly_proportion_distribution  = getattr(np.random, depoly_proportion_distribution_info['name'])
-    depoly_proportion = depoly_proportion_distribution(**depoly_proportion_distribution_info['params'])
+    if args.depoly is None:
+        depoly_proportion_distribution_info = config['depoly_proportion_distribution']
+        depoly_proportion_distribution  = getattr(np.random, depoly_proportion_distribution_info['name'])
+        depoly_proportion = depoly_proportion_distribution(**depoly_proportion_distribution_info['params'])
+    else:
+        depoly_proportion = args.depoly
 
     if not mode.startswith('demo'):
         if output_dir is None:
@@ -311,7 +319,7 @@ if __name__ == '__main__':
             raise ValueError(f"The file name {tubulaton_output_file_path} does not match the 'tubulaton-[number].vtk' format.")
 
     # Make iterator for tubulaton output file paths
-    file_path_iterator : Iterable   
+    file_path_iterator : List[Path]   
     if mode == 'demo_interactive':
         file_path = random.choice(tubulaton_output_file_paths)
 
@@ -325,6 +333,9 @@ if __name__ == '__main__':
             tubulaton_output_file_paths = tubulaton_output_file_paths[:max_num_files]
             file_path_iterator = tubulaton_output_file_paths
 
+    if len(file_path_iterator) > 1 and output_name is not None:
+        raise ValueError(f"An output name was specified, but the program is set up to run on multiple .vtk files!")
+
     for tubulaton_output_file_path in file_path_iterator:
         block_start_time = time.time()
 
@@ -334,8 +345,15 @@ if __name__ == '__main__':
             if output_dir is None:
                 raise ValueError("Output dir cannot be None when not in demo mode!")
 
-            image_file_path = output_dir / f'Images/image-{file_id}.png' 
-            label_file_path = output_dir / f'Labels/label-{file_id}.png' 
+            if output_name is None:
+                image_file_name = f"image-{file_id}.png"
+                label_file_name = f"label-{file_id}.png"
+            else:
+                image_file_name = f"{output_name}.png" 
+                label_file_name = f"{output_name}.png" 
+
+            image_file_path = output_dir / 'Images' / image_file_name
+            label_file_path = output_dir / 'Labels' / label_file_name
 
             if mode == 'overwrite' or (not image_file_path.exists()) or (not label_file_path.exists()):
                 image, label = generate(tubulaton_output_file_path=tubulaton_output_file_path,
@@ -383,7 +401,7 @@ if __name__ == '__main__':
 
                 plt.savefig(demo_save_file_path,
                             format='png',
-                            dpi=500)
+                            dpi=800)
 
                 if verbose:
                     print(f"Saved demo to {demo_save_file_path}")

@@ -46,6 +46,20 @@ class LossNamespace:
             else:
                 return focal_loss
 
+def weight_dict_to_tensor(raw_weights : dict,
+                          normalize : bool = False) -> torch.Tensor:
+    weights = [None] * len(Labels)
+    for label_str in raw_weights:
+        index = Labels[label_str].value
+        weights[index] = raw_weights[label_str]
+
+    weights = torch.tensor(weights)
+
+    if normalize:
+        weights /= weights.sum()
+
+    return weights
+
 def get_criterion(loss_config : dict,
                   device : torch.device) -> nn.Module:
     loss_name = loss_config['name']
@@ -53,13 +67,17 @@ def get_criterion(loss_config : dict,
     raw_loss_params = loss_config['params']
     new_loss_params = raw_loss_params.copy()
 
-    if 'weight' in raw_loss_params:
-        raw_class_weights = raw_loss_params['weight']
-        class_weights = [None] * len(Labels)
-        for label_str in raw_class_weights:
-            index = Labels[label_str].value
-            class_weights[index] = raw_class_weights[label_str]
-        new_loss_params['weight'] = torch.tensor(class_weights).to(device)
+    if loss_name == 'CrossEntropyLoss':
+        if 'weight' in raw_loss_params:
+            raw_class_weights = raw_loss_params['weight']
+            new_loss_params['weight'] = weight_dict_to_tensor(raw_class_weights,
+                                                            normalize=True).to(device)
+
+    if loss_name == 'FocalLoss':
+        if 'alpha' in raw_loss_params:
+            raw_weights = raw_loss_params['alpha']
+            new_loss_params['alpha'] = weight_dict_to_tensor(raw_weights,
+                                                            normalize=True).to(device)
 
     if hasattr(nn, loss_name):
         LossFunction = getattr(nn, loss_name)

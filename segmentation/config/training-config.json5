@@ -1,14 +1,12 @@
 {
-    "model_dir": "/Users/karan/microsegmentation/Models/",
-
-    "batches_per_epoch": 300, //TESTING null
-    "batches_per_test": 50, //TESTING null
+    "batches_per_epoch": 3, //TESTING null
+    "batches_per_test": 2, //TESTING null
     "batch_size": 1, 
 
     "train_test_split": 0.8,
 
     "optimizer": {
-        "lr": 1e-4,
+        "lr": 2e-5,
         "momentum": 0.9,
         "weight_decay": 5e-4
     },
@@ -19,14 +17,14 @@
     },
 
     "loss": {
-        "name": "CrossEntropyLoss",
+        "name": "FocalLoss",
 
         "params": {
-            //Calculated "manually" in python notebook. If this is the right way to go, make the calculation automatic.
-            "weight": {
-                "POLYMERIZED": 1.0, //0.9478,
-                "DEPOLYMERIZED": 1.0, //0.0522,
-            },
+            /*"alpha": {
+                "POLYMERIZED": 3.0, 
+                "DEPOLYMERIZED": 1.0, 
+            },*/
+            "gamma": 5.0,
         },
     },
 }

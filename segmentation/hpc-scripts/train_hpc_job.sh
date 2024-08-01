@@ -22,12 +22,16 @@
 #! Note that the job submission script will enforce no more than 32 cpus per GPU.
 #SBATCH --gres=gpu:4
 #! How much wallclock time will be required?
-#SBATCH --time=12:00:00
+#! TODO TESTING
+#SBATCH --time=00:02:00
 #! What types of email messages do you wish to receive?
 #SBATCH --mail-type=NONE
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
+
+#! TODO TESTING
+#SBATCH --qos=intr
 
 #! Do not change:
 #SBATCH -p ampere
@@ -54,14 +58,21 @@ module load rhel8/default-amp              # REQUIRED - loads the basic environm
 #! Insert additional module load commands after this line if needed:
 
 #! Full path to application executable: 
-base_dir="/rds/user/ke330/hpc-work/microsegmentation/segmentation"
-source $base_dir/.venv_segmentation/bin/activate
-application="python3 $base_dir/train.py"
+base_dir="/rds/user/ke330/hpc-work"
+segmentation_dir="$base_dir/microsegmentation/segmentation"
+
+source $segmentation_dir/.venv_segmentation/bin/activate
+application="python3 $segmentation_dir/train.py"
 
 #! Run options for the application:
-config_file_path="$base_dir/config/"
-save_file_name="$1"
-options="$config_file_path $save_file_name"
+config_file_path="$segmentation_dir/config"
+model_dir="$base_dir/Models"
+data_dir="$base_dir/Synthetic"
+log_dir="$base_dir/runs"
+#! TODO TESTING
+epochs=5 #100
+
+options="--config $config_file_path --name $1 --datadir $data_dir --modeldir $model_dir --logdir $log_dir --epochs $epochs --verbose "
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
