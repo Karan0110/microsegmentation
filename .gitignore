@@ -13,6 +13,9 @@ Sandbox.ipynb
 sandbox.py
 *_DEPRECATED.py
 
+param_sweep_config_files/
+param_sweep_config_files_test/
+
 Models/
 demos/
 Standard_Demo/

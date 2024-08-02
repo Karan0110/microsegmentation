@@ -1,11 +1,11 @@
 {
-    "loss": "TverskyLoss",
+    "loss": "FocalLoss",
 
     "loss_options": {
         "TverskyLoss": {
             "alpha": 0.1,
             "beta":  0.9,         
-            "eps": 1e-6,
+            "eps": 1e-8,
         },
 
         "FocalLoss": {

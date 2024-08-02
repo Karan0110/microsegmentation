@@ -23,19 +23,13 @@ def train_model(model : nn.Module,
     model.to(device)
 
     running_loss = 0.0
-    
-    batch_size : Union[int, None] = None
+    running_count : int = 0
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         if num_batches is not None and batch_idx >= num_batches:
             break
     
         inputs, targets = inputs.to(device), targets.to(device)
-
-        if batch_size is None:
-            batch_size = inputs.size(0)
-        elif batch_size != inputs.size(0):
-            raise ValueError(f"Inconsistent batch sizes in training data! ({batch_size} and {inputs.size(0)})")
 
         model.train()
 
@@ -49,16 +43,10 @@ def train_model(model : nn.Module,
         optimizer.step()
 
         running_loss += loss.item()
-
-    if batch_size is None:
-        raise ValueError(f"There was no training data to infer batch_size from!")
+        running_count += inputs.size(0)
 
     # Log the train loss
-    if num_batches is not None:
-        num_batches = min(len(train_loader), num_batches)
-    else:
-        num_batches = len(train_loader)
-    train_loss = running_loss / (num_batches * batch_size)
+    train_loss = running_loss / running_count
 
     writer.add_scalar('loss/train',
                       train_loss,
@@ -77,16 +65,11 @@ def test_model(model : nn.Module,
 
     running_loss = 0.0
 
-    batch_size : Union[int, None] = None
+    running_count = 0
 
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             model.eval()
-
-            if batch_size is None:
-                batch_size = inputs.size(0)
-            elif batch_size != inputs.size(0):
-                raise ValueError(f"Inconsistent batch sizes in training data! ({batch_size} and {inputs.size(0)})")
 
             if num_batches is not None and batch_idx >= num_batches:
                 break
@@ -96,15 +79,10 @@ def test_model(model : nn.Module,
             loss = criterion(outputs, targets)
 
             running_loss += loss.item()
+            running_count += inputs.size(0)
 
-    if batch_size is None:
-        raise ValueError(f"There was no testing data to infer batch_size from!")
 
-    if num_batches is not None:
-        num_batches = min(len(test_loader), num_batches)
-    else:
-        num_batches = len(test_loader)
-    test_loss = running_loss / (num_batches * batch_size)
+    test_loss = running_loss / running_count
 
     writer.add_scalar('loss/test',
                       scalar_value=test_loss,

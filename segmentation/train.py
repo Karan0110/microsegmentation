@@ -6,6 +6,7 @@ import time
 from typing import Iterable, Tuple, Any
 import itertools
 import shutil
+import subprocess
 
 import torch
 import torch.nn as nn
@@ -17,7 +18,7 @@ from unet import UNet
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders
 from loss import get_criterion
-
+from demo import plot_demos
 from device import get_device
 from file_io import load_config, get_model_save_file_paths, save_model
 
@@ -71,6 +72,11 @@ def get_command_line_args() -> argparse.Namespace:
                         type=Path, 
                         help='Config Directory (If not in overwrite mode, program uses a pre-existing config if it exists)')
 
+    parser.add_argument('-dc', '--democonfig',
+                        type=Path,
+                        default=None,
+                        help='Path to demo config (If left blank no demos are plotted)')
+
     parser.add_argument('-n', '--name',
                         type=str,
                         required=True,
@@ -123,10 +129,13 @@ if __name__ == '__main__':
     verbose = args.verbose
     overwrite_mode = args.overwrite
     model_name = args.name
+
     model_dir = args.modeldir
     config_dir = args.config
     log_dir = args.logdir
     dataset_dir = args.datadir 
+    demo_config_path = args.democonfig
+
     num_epochs = args.epochs
     save_mode = args.savemode
 
@@ -152,6 +161,10 @@ if __name__ == '__main__':
     else:
         print(f"\nConfig files: {config_dir.absolute()}")
         config = load_config(config_dir)
+
+    demo_config = None
+    if demo_config_path is not None:
+        demo_config = load_config(demo_config_path)
 
     # Set up TensorBoard writer
     # -------------------------
@@ -301,9 +314,21 @@ if __name__ == '__main__':
                             epoch=epoch,
                             verbose=verbose)
 
+            if demo_config is not None:
+                plot_demos(demo_config=demo_config,
+                           demo_name=f"{model_name}_epoch_{epoch}",
+                           model_name=model_name,
+                           hard_segmentation_threshold=0.5,
+                           model=model,
+                           model_dir=model_dir,
+                           model_config=config['model'],
+                           device=device,
+                           verbose=False,
+                           save_to_file=True)
+
             print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
         except KeyboardInterrupt:
-            print(f"Interrupted during epoch {epoch}.")
+            print(f"\nInterrupted during epoch {epoch}.")
             break
 
     # Output time taken

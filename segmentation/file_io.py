@@ -80,7 +80,7 @@ def load_config(path : Path) -> dict:
         with path.open('r') as file:
             config = json5.load(file)
         if not isinstance(config, dict):
-            raise ValueError(f"The file {file} is not a dictionary!")
+            raise ValueError(f"The file {path} is not a dictionary!")
     else:
         raise ValueError(f"Invalid config path: {path}\nMust be a .json5 file or a directory!")
 

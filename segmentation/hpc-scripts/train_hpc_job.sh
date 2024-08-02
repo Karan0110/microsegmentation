@@ -64,8 +64,10 @@ segmentation_dir="$base_dir/microsegmentation/segmentation"
 source $segmentation_dir/.venv_segmentation/bin/activate
 application="python $segmentation_dir/train.py"
 
+#! TODO TESTING - we have modified to accomodate an array job parameter sweep
+
 #! Run options for the application:
-config_file_path="$segmentation_dir/config"
+config_file_path="$base_dir/param_sweep_config_files/config_$SLURM_ARRAY_TASK_ID"
 model_dir="$base_dir/Models"
 data_dir="$base_dir/Synthetic"
 log_dir="$base_dir/runs"
