@@ -22,7 +22,7 @@ def save_model(model : nn.Module,
                model_config : dict,
                training_config : dict,
                augmentation_config : dict,
-               training_data_config : dict,
+               data_config : dict,
                model_dir : Path, 
                model_name : str,
                epoch : int,
@@ -49,7 +49,7 @@ def save_model(model : nn.Module,
                 'epoch': epoch,
                 'model': model_config,
                 'training': training_config,
-                'training_data': training_data_config,
+                'training_data': data_config,
                 'augmentation': augmentation_config,
             }, f, indent=4)
     except KeyboardInterrupt:
@@ -69,14 +69,26 @@ def save_model(model : nn.Module,
     
     return state_save_file_path
 
-def load_json5_config(file_path : Path) -> dict:
-    if file_path.suffix != '.json5':
-        raise ValueError(f"Invalid config file path {file_path}\n" + f"Config file must be .json5")
+# Either loads a .json5 config file or a folder of .json5 config files.
+def load_config(path : Path) -> dict:
+    config = {}
 
-    with file_path.open('r') as file:
-        config = json5.load(file)
-    if not isinstance(config, dict):
-        raise TypeError(f"JSON5 config file {file_path} is of invalid format! It should be a dictionary")
+    if path.is_dir():
+        for config_file_path in path.glob('*.json5'):
+            key = config_file_path.stem
+            
+            with config_file_path.open('r') as file:
+                sub_config = json5.load(file)
+                if not isinstance(sub_config, dict):
+                    raise ValueError(f"The file {config_file_path} is not a dictionary!")
+                config[key] = sub_config
+    elif path.is_file() and path.suffix == '.json5':
+        with path.open('r') as file:
+            config = json5.load(file)
+        if not isinstance(config, dict):
+            raise ValueError(f"The file {file} is not a dictionary!")
+    else:
+        raise ValueError(f"Invalid config path: {path}\nMust be a .json5 file or a directory!")
 
     return config
 

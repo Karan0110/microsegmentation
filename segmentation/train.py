@@ -19,12 +19,14 @@ from synthetic_dataset import get_data_loaders
 from loss import get_criterion
 
 from device import get_device
-from file_io import load_json5_config, get_model_save_file_paths, save_model
+from file_io import load_config, get_model_save_file_paths, save_model
 
 def create_model_criterion_optimizer_scheduler(model_config : dict,
-                                            training_config : dict,
-                                            device : torch.device,
-                                            verbose : bool) -> Tuple[nn.Module,  nn.Module, optim.SGD, Any]:
+                                               training_config : dict,
+                                               loss_config : dict,
+                                               device : torch.device,
+                                               verbose : bool) -> Tuple[nn.Module,  nn.Module, optim.SGD, Any]:
+
     depth = model_config['depth']
     in_channels = model_config['in_channels']
     out_channels = model_config['out_channels']
@@ -37,21 +39,26 @@ def create_model_criterion_optimizer_scheduler(model_config : dict,
                  out_channels=out_channels,
                  padding_mode=convolution_padding_mode).to(device)
 
-    loss_config = training_config['loss']
     criterion = get_criterion(loss_config=loss_config,
                               device=device)
 
     optimizer_config = training_config['optimizer']
-    optimizer = optim.SGD(model.parameters(), **optimizer_config)
+
+    # TODO - the else statement accounts only for deprecated model currently scheduled to be trained on HPC
+    # In future remove this control flow and assume 'name' is in config
+    if 'name' in optimizer_config:
+        optimizer_name = optimizer_config['name']
+        optimizer_params = optimizer_config['params']
+        optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_params)
+    else:
+        optimizer = optim.SGD(model.parameters(), **optimizer_config)
 
     scheduler_config = training_config['scheduler']
     scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
 
     return model, criterion, optimizer, scheduler
 
-if __name__ == '__main__':
-    start_time = time.time()
-
+def get_command_line_args() -> argparse.Namespace:
     # Parse CL arguments
     parser = argparse.ArgumentParser(
         description="Train U-Net model on synthetic training data."
@@ -96,65 +103,68 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # python3 train.py -c config/ -n model-v3-test -e 5 -v 
+    return args
 
-    # Verbose CL arg
+if __name__ == '__main__':
+    start_time = time.time()
+
+    # Handle CL arguments
+    # --------------------
+
+    args = get_command_line_args()
+
     verbose = args.verbose
-
-    # Overwrite mode CL arg
     overwrite_mode = args.overwrite
-
-    # Load config files from local directory or model if we are using checkpoint
     model_name = args.name
     model_dir = args.modeldir
+    config_dir = args.config
+    log_dir = args.logdir
+    dataset_dir = args.datadir 
+    num_epochs = args.epochs
+
+    # Set up device
+    # --------------
+
+    device : torch.device = get_device(verbose=verbose)
+
+    # Location of model/config savefiles
+    # ----------------------------------
 
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
                                                                             model_name=model_name)
 
     # Load the config files
-    config_dir = args.config
+    # ---------------------
 
     if config_save_file_path.exists() and (not overwrite_mode):
         if verbose:
             print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
-
-        config = load_json5_config(config_save_file_path)
-
-        training_config = config['training']
-        training_data_config = config['training_data']
-        augmentation_config = config['augmentation']
-        model_config = config['model']
+        config = load_config(config_save_file_path)
     else:
         print(f"\nConfig files: {config_dir.absolute()}")
+        config = load_config(config_dir)
 
-        training_config = load_json5_config(config_dir / 'training-config.json5')
-        training_data_config = load_json5_config(config_dir / 'training-data-config.json5')
-        augmentation_config = load_json5_config(config_dir / 'augmentation-config.json5')
-        model_config = load_json5_config(config_dir / 'model-config.json5')
+    training_config = config['training']
+    data_config = config['data']
+    augmentation_config = config['augmentation']
+    model_config = config['model']
+    loss_config = config['loss']
 
     # Set up TensorBoard writer
-    log_dir = args.logdir / f"{model_name}"
+    # -------------------------
     if verbose:
         print(f"TensorBoard log dir: {log_dir}")
     writer = SummaryWriter(log_dir)
-    
-    dataset_dir = args.datadir 
-    print(f"Training Data: {dataset_dir}")
-
-    # Set up device
-    device : torch.device = get_device(verbose=verbose)
-
-    #CHECKPOINT - working till here!
 
     # Set up data loaders
+    # -------------------
 
-    # TODO TESTING REMOVE THIS!!!
-    # transform_config = augmentation_config['transforms']
-    transform_config = []
-    # REMOVE THIS!!!
+    transform_config = augmentation_config['transforms']
     
-    color_to_label = training_data_config['color_to_label']
-    color_to_label = {int(key) : value for key, value in color_to_label.items()}
+    if verbose:
+        print(f"Training Data: {dataset_dir}")
+
+    color_to_label = data_config['color_to_label']
 
     batch_size = training_config['batch_size']
     train_test_split = training_config['train_test_split']
@@ -168,16 +178,20 @@ if __name__ == '__main__':
                                                  transform_config=transform_config,
                                                  color_to_label=color_to_label,
                                                  batch_size=batch_size,
-                                                 train_test_split=train_test_split)
+                                                 train_test_split=train_test_split,
+                                                 verbose=verbose)
 
     # Initialize model, loss function, optimizer, and scheduler
+    # ---------------------------------------------------------
 
     model, criterion, optimizer, scheduler = create_model_criterion_optimizer_scheduler(model_config=model_config,
                                                                                         training_config=training_config,
+                                                                                        loss_config=loss_config,
                                                                                         device=device,
                                                                                         verbose=verbose)
 
-    # Check if savefile exists: if so, continue training from checkpoint
+    # Check if savefile exists
+    # ------------------------
                             
     start_epoch : int
     if state_save_file_path.exists():
@@ -198,28 +212,29 @@ if __name__ == '__main__':
                 config = json5.load(config_save_file)
                 start_epoch = config['epoch'] + 1 #type: ignore
         else:
-            if verbose:
-                print(f"Overwriting savefile with new run...")
-
             # Delete tensorboard logs
+            if verbose:
+                print(f"Clearing old tensorboard logs...")
             shutil.rmtree(writer.log_dir)
             os.makedirs(writer.log_dir, exist_ok=True)
 
             # Delete pre-existing model files
+            if verbose:
+                print(f"Clearing old savefiles...")
             os.remove(state_save_file_path)
             os.remove(config_save_file_path)
 
             start_epoch = 1
     else:
         # Delete any old tensorboard logs
+        print(f"Clearing any old tensorboard logs...")
         shutil.rmtree(writer.log_dir)
         os.makedirs(writer.log_dir, exist_ok=True)
 
         start_epoch = 1
 
     # Training and testing loop
-
-    num_epochs = args.epochs
+    # -------------------------
 
     epoch_iterator : Iterable
     if num_epochs is not None:
@@ -247,7 +262,6 @@ if __name__ == '__main__':
                        device=device, 
                        writer=writer,
                        epoch=epoch,
-                       patch_size=patch_size,
                        test_loader=test_loader, 
                        criterion=criterion,
                        num_batches=batches_per_test,
@@ -256,16 +270,16 @@ if __name__ == '__main__':
             scheduler.step()
 
             save_model(model=model,
-                    optimizer=optimizer,
-                    scheduler=scheduler, 
-                    model_config=model_config,
-                    training_config=training_config,
-                    augmentation_config=augmentation_config,
-                    training_data_config=training_data_config,
-                    model_dir = model_dir,
-                    model_name=model_name,
-                    epoch=epoch,
-                    verbose=verbose)
+                        optimizer=optimizer,
+                        scheduler=scheduler, 
+                        model_config=model_config,
+                        training_config=training_config,
+                        augmentation_config=augmentation_config,
+                        data_config=data_config,
+                        model_dir = model_dir,
+                        model_name=model_name,
+                        epoch=epoch,
+                        verbose=verbose)
 
             print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
         except KeyboardInterrupt:
@@ -273,6 +287,8 @@ if __name__ == '__main__':
             break
 
     # Output time taken
+    # -----------------
+
     time_taken = int(time.time() - start_time)
     seconds = time_taken % 60
     minutes = (time_taken // 60) % 60
@@ -281,7 +297,3 @@ if __name__ == '__main__':
     print(f"\nTook {hours} hrs {minutes} min in total.")
 
     writer.close()
-
-# python3 train.py train-config.json5 augmentation-config.json5 model-v3
-# python3 train.py 
-# python train.py -c config/ --name model-TEST -dd /Users/karan/MTData/Synthetic_CLEAN -md /Users/karan/microsegmentation/Models --verbose --epoch 5 

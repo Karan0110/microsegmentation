@@ -24,15 +24,6 @@
       }
     },
     {
-      "name": "ElasticTransform",
-      "params": {
-        "alpha": 50.0,        // Strength of the distortion (default 1.0)
-        "sigma": 50,         // Smoothness of the distortion
-        "alpha_affine": 50,  // Strength of the affine transformation
-        "p": 1.0, //default 0.5
-      }
-    },
-    {
       "name": "RandomBrightnessContrast",
       "params": {
         "brightness_limit": 0.2,  // Max brightness adjustment
@@ -43,20 +34,11 @@
     {
       "name": "GaussNoise",
       "params": {
-        "var_limit": [10.0, 100.0],  // Variance range of the noise
+        "var_limit": [10.0, 200.0],  // Variance range of the noise
         "mean": 0,                  // Mean of the noise
         "per_channel": true,        // Apply noise per channel
         "noise_scale_factor": 1,    // Scaling factor for the noise
-        "p": 0.5
-      }
-    },
-    {
-      "name": "GridDistortion",
-      "params": {
-        "num_steps": 25,          // Number of grid cells (default 5)
-        "distort_limit": 0.8,    // Distortion factor (0.3 default)
-        "interpolation": 1,      // Interpolation method
-        "p": 0.5
+        // "p": 0.5
       }
     },
     {

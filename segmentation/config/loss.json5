@@ -1,0 +1,15 @@
+{
+    "loss": "TverskyLoss",
+
+    "loss_options": {
+        "TverskyLoss": {
+            "alpha": 0.1,
+            "beta":  0.9,         
+            "eps": 1e-6,
+        },
+
+        "FocalLoss": {
+            "gamma": 2.0,
+        },
+    },
+}

@@ -115,7 +115,7 @@ class SyntheticDataset(Dataset):
             image = augmented['image']
             label = augmented['mask'].to(torch.int64)
 
-        #Convert masks to format that works with pytorch CrossEntropy loss
+        #Convert masks to format that works with pytorch loss
         mapping_array = [self.color_to_label_index.get(i, -1) for i in range(256)]  # Create a mapping list with default -1 for unmapped values
         mapping_tensor = torch.tensor(mapping_array)
 
@@ -128,7 +128,11 @@ def get_data_loaders(base_dir : Path,
                      transform_config : list,
                      color_to_label : dict,
                      train_test_split : float,
-                     batch_size : int) -> Tuple[DataLoader, DataLoader]:
+                     batch_size : int,
+                     verbose : bool) -> Tuple[DataLoader, DataLoader]:
+    # Preprocess color_to_label to appropriate form
+    color_to_label = {int(key) : value for key, value in color_to_label.items()}
+
     # Create transformation pipeline
     transform_list = []
 

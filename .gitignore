@@ -22,3 +22,5 @@ job_templates/
 Papers/
 ResearchLeads.md
 Tasks.md
+HyperparamSweep.md
+Experiments.md
