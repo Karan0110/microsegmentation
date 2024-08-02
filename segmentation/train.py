@@ -91,6 +91,11 @@ def get_command_line_args() -> argparse.Namespace:
                         required=True,
                         help="Model directory")
     
+    parser.add_argument('-sm', '--savemode',
+                        choices=['best', 'recent'],
+                        default='best',
+                        help="Which model is saved to file")
+    
     parser.add_argument('-e', '--epochs',
                         type=int,
                         help="Number of epochs (Leave blank to continue until KeyboardInterrupt)")
@@ -123,6 +128,7 @@ if __name__ == '__main__':
     log_dir = args.logdir
     dataset_dir = args.datadir 
     num_epochs = args.epochs
+    save_mode = args.savemode
 
     # Set up device
     # --------------
@@ -138,6 +144,7 @@ if __name__ == '__main__':
     # Load the config files
     # ---------------------
 
+    config : dict
     if config_save_file_path.exists() and (not overwrite_mode):
         if verbose:
             print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
@@ -145,12 +152,6 @@ if __name__ == '__main__':
     else:
         print(f"\nConfig files: {config_dir.absolute()}")
         config = load_config(config_dir)
-
-    training_config = config['training']
-    data_config = config['data']
-    augmentation_config = config['augmentation']
-    model_config = config['model']
-    loss_config = config['loss']
 
     # Set up TensorBoard writer
     # -------------------------
@@ -161,19 +162,20 @@ if __name__ == '__main__':
     # Set up data loaders
     # -------------------
 
-    transform_config = augmentation_config['transforms']
+    transform_config = config['augmentation']['transforms']
     
     if verbose:
         print(f"Training Data: {dataset_dir}")
 
-    color_to_label = data_config['color_to_label']
+    color_to_label = config['data']['color_to_label']
 
+    training_config = config['training']
     batch_size = training_config['batch_size']
     train_test_split = training_config['train_test_split']
     batches_per_epoch = training_config['batches_per_epoch']
     batches_per_test = training_config['batches_per_test']
 
-    patch_size = model_config['patch_size']
+    patch_size = config['model']['patch_size']
 
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
@@ -186,9 +188,9 @@ if __name__ == '__main__':
     # Initialize model, loss function, optimizer, and scheduler
     # ---------------------------------------------------------
 
-    model, criterion, optimizer, scheduler = create_model_criterion_optimizer_scheduler(model_config=model_config,
-                                                                                        training_config=training_config,
-                                                                                        loss_config=loss_config,
+    model, criterion, optimizer, scheduler = create_model_criterion_optimizer_scheduler(model_config=config['model'],
+                                                                                        training_config=config['training'],
+                                                                                        loss_config=config['loss'],
                                                                                         device=device,
                                                                                         verbose=verbose)
 
@@ -211,7 +213,10 @@ if __name__ == '__main__':
             scheduler.load_state_dict(checkpoint['scheduler'])
 
             with open(config_save_file_path, 'r') as config_save_file:
-                config = json5.load(config_save_file)
+                loaded_config = json5.load(config_save_file)
+                if not isinstance(loaded_config, dict):
+                    raise ValueError(f"Model config path ({config_save_file_path}) is invalid - it should be a dict!")
+                config = loaded_config
                 start_epoch = config['epoch'] + 1 #type: ignore
         else:
             # Delete tensorboard logs
@@ -238,6 +243,8 @@ if __name__ == '__main__':
     # Training and testing loop
     # -------------------------
 
+    best_test_loss = None
+
     epoch_iterator : Iterable
     if num_epochs is not None:
         epoch_iterator = range(start_epoch, start_epoch+num_epochs)
@@ -260,28 +267,39 @@ if __name__ == '__main__':
                         num_batches=batches_per_epoch,
                         verbose=verbose)
 
-            test_model(model=model, 
-                       device=device, 
-                       writer=writer,
-                       epoch=epoch,
-                       test_loader=test_loader, 
-                       criterion=criterion,
-                       num_batches=batches_per_test,
-                       verbose=verbose)
+            test_loss = test_model(model=model, 
+                                    device=device, 
+                                    writer=writer,
+                                    epoch=epoch,
+                                    test_loader=test_loader, 
+                                    criterion=criterion,
+                                    num_batches=batches_per_test,
+                                    verbose=verbose)
+
+            if verbose:
+                print(f"Test Loss: {test_loss}")
+
+            historical_best = False
+
+            if best_test_loss is None or test_loss < best_test_loss:
+                if verbose:
+                    print(f"This is a historical best test loss.")
+                    if save_mode == 'best':
+                        print(f"We are in best savemode - so it will be saved to file.")
+                best_test_loss = test_loss
+                historical_best = True
                     
             scheduler.step()
 
-            save_model(model=model,
-                        optimizer=optimizer,
-                        scheduler=scheduler, 
-                        model_config=model_config,
-                        training_config=training_config,
-                        augmentation_config=augmentation_config,
-                        data_config=data_config,
-                        model_dir = model_dir,
-                        model_name=model_name,
-                        epoch=epoch,
-                        verbose=verbose)
+            if historical_best or save_mode == 'recent':
+                save_model(model=model,
+                            config=config,
+                            optimizer=optimizer,
+                            scheduler=scheduler, 
+                            model_dir=model_dir,
+                            model_name=model_name,
+                            epoch=epoch,
+                            verbose=verbose)
 
             print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
         except KeyboardInterrupt:

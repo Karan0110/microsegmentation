@@ -72,7 +72,7 @@ def test_model(model : nn.Module,
                writer : SummaryWriter,
                epoch : int,
                num_batches : Union[int, None],
-               verbose : bool = False) -> None:
+               verbose : bool = False) -> float:
     model.to(device)
 
     running_loss = 0.0
@@ -110,3 +110,5 @@ def test_model(model : nn.Module,
                       scalar_value=test_loss,
                       global_step=epoch)
     writer.flush()
+
+    return test_loss

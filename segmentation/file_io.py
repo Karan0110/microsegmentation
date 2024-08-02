@@ -19,10 +19,7 @@ def get_model_save_file_paths(model_dir : Path,
 def save_model(model : nn.Module,
                optimizer : Optimizer,
                scheduler : Any,
-               model_config : dict,
-               training_config : dict,
-               augmentation_config : dict,
-               data_config : dict,
+               config : dict,
                model_dir : Path, 
                model_name : str,
                epoch : int,
@@ -45,13 +42,10 @@ def save_model(model : nn.Module,
         
         # Save the configuration
         with config_save_file_path.open('w') as f:
-            json5.dump({
-                'epoch': epoch,
-                'model': model_config,
-                'training': training_config,
-                'training_data': data_config,
-                'augmentation': augmentation_config,
-            }, f, indent=4)
+            json5.dump({**config, 
+                        'epoch': epoch},
+                        fp=f,
+                        indent=4,)
     except KeyboardInterrupt:
         # Handle the keyboard interrupt or any cleanup here if necessary
         if verbose:
@@ -101,17 +95,20 @@ def load_model(model_file_path : Path,
     with config_file_path.open('r') as model_config_file:
         config = json5.load(model_config_file) #type: ignore
     model_config = config['model']
+    training_config = config['training']
 
     depth = model_config['depth']
     base_channel_num = model_config['base_channel_num']
     in_channels = model_config['in_channels']
     out_channels = model_config['out_channels']
     padding_mode = model_config['convolution_padding_mode']
+    dropout_rate = training_config['dropout_rate']
 
     model = UNet(depth=depth,
                  base_channel_num=base_channel_num,
                  in_channels=in_channels,
                  out_channels=out_channels,
+                 dropout_rate=dropout_rate,
                  padding_mode=padding_mode)
     model.load_state_dict(model_data['state_dict'])
 
