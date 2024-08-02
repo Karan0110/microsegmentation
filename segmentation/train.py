@@ -32,11 +32,13 @@ def create_model_criterion_optimizer_scheduler(model_config : dict,
     out_channels = model_config['out_channels']
     base_channel_num = model_config['base_channel_num']
     convolution_padding_mode = model_config['convolution_padding_mode']
+    dropout_rate = training_config['dropout_rate']
 
     model = UNet(depth=depth,
                  base_channel_num=base_channel_num,
                  in_channels=in_channels,
                  out_channels=out_channels,
+                 dropout_rate=dropout_rate,
                  padding_mode=convolution_padding_mode).to(device)
 
     criterion = get_criterion(loss_config=loss_config,

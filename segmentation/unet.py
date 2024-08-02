@@ -36,8 +36,11 @@ class UNet(nn.Module):
                  base_channel_num : int,
                  in_channels : int,
                  out_channels : int,
-                 padding_mode : str = 'zeros') -> None:
+                 dropout_rate : float,
+                 padding_mode : str) -> None:
         super().__init__()
+
+        self.dropout_rate = dropout_rate
 
         self.padding_mode = padding_mode
 
@@ -110,6 +113,7 @@ class UNet(nn.Module):
                       padding=1,
                       padding_mode=self.padding_mode),
             nn.ReLU(),
+            nn.Dropout2d(p=self.dropout_rate),
         ]
 
         return nn.Sequential(*layers)
@@ -133,6 +137,7 @@ class UNet(nn.Module):
                       padding=1,
                       padding_mode=self.padding_mode),
             nn.ReLU(),
+            nn.Dropout2d(p=self.dropout_rate),
         ]
 
         if do_upsample:
@@ -157,6 +162,7 @@ class UNet(nn.Module):
                       padding=1,
                       padding_mode=self.padding_mode),
             nn.ReLU(),
+            nn.Dropout2d(p=self.dropout_rate),
 
             nn.Conv2d(in_channels=in_channels*2,
                       out_channels=in_channels*2,
@@ -164,11 +170,12 @@ class UNet(nn.Module):
                       padding=1,
                       padding_mode=self.padding_mode),
             nn.ReLU(),
+            nn.Dropout2d(p=self.dropout_rate),
 
             nn.ConvTranspose2d(in_channels=in_channels*2, 
-                            out_channels=in_channels, 
-                            kernel_size=2, 
-                            stride=2),
+                                out_channels=in_channels, 
+                                kernel_size=2, 
+                                stride=2),
         ]
 
         return nn.Sequential(*layers)
