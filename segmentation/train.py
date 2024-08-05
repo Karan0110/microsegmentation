@@ -6,7 +6,7 @@ import time
 from typing import Iterable, Tuple, Any
 import itertools
 import shutil
-import subprocess
+import copy
 
 import torch
 import torch.nn as nn
@@ -14,52 +14,53 @@ import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
-from unet import UNet
 from epoch import train_model, test_model
-from synthetic_dataset import get_data_loaders
-from loss import get_criterion
+from synthetic_dataset import get_data_loaders, Labels
+from criterions.utils import get_criterion
 from demo import plot_demos
-from device import get_device
-from file_io import load_config, get_model_save_file_paths, save_model
+from utils import instantiate_from_dict, load_json5, get_device
+from models.serialization import get_model_save_file_paths, save_model_to_file
+import models
 
-def create_model_criterion_optimizer_scheduler(model_config : dict,
-                                               training_config : dict,
-                                               loss_config : dict,
-                                               device : torch.device,
-                                               verbose : bool) -> Tuple[nn.Module,  nn.Module, optim.SGD, Any]:
+def get_model(model_config : dict,
+              device : torch.device,
+              verbose : bool) -> nn.Module:
+    model = instantiate_from_dict(models, information=model_config)
+    model = model.to(device)
 
-    depth = model_config['depth']
-    in_channels = model_config['in_channels']
-    out_channels = model_config['out_channels']
-    base_channel_num = model_config['base_channel_num']
-    convolution_padding_mode = model_config['convolution_padding_mode']
-    dropout_rate = training_config['dropout_rate']
+    if verbose:
+        print(f"Created {model_name} model.")
 
-    model = UNet(depth=depth,
-                 base_channel_num=base_channel_num,
-                 in_channels=in_channels,
-                 out_channels=out_channels,
-                 dropout_rate=dropout_rate,
-                 padding_mode=convolution_padding_mode).to(device)
+    return model
+    
 
-    criterion = get_criterion(loss_config=loss_config,
-                              device=device)
+def get_optimizer(model : nn.Module,
+                  optimizer_config : dict,
+                  verbose : bool) -> optim.Optimizer:
+    extra_optimizer_config = copy.deepcopy(optimizer_config)
+    extra_optimizer_config['params']['params'] = model.parameters()
 
-    optimizer_config = training_config['optimizer']
+    optimizer = instantiate_from_dict(namespace=torch.optim, 
+                                      information=extra_optimizer_config)
 
-    # TODO - the else statement accounts only for deprecated model currently scheduled to be trained on HPC
-    # In future remove this control flow and assume 'name' is in config
-    if 'name' in optimizer_config:
-        optimizer_name = optimizer_config['name']
-        optimizer_params = optimizer_config['params']
-        optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_params)
-    else:
-        optimizer = optim.SGD(model.parameters(), **optimizer_config)
+    if verbose:
+        print(f"Initialized optimizer.")
 
-    scheduler_config = training_config['scheduler']
-    scheduler = optim.lr_scheduler.StepLR(optimizer, **scheduler_config)
+    return optimizer
 
-    return model, criterion, optimizer, scheduler
+def get_scheduler(optimizer : optim.Optimizer,
+                  scheduler_config : dict,
+                  verbose : bool) -> optim.lr_scheduler.LRScheduler:
+    extra_scheduler_config = copy.deepcopy(scheduler_config)
+    extra_scheduler_config['params']['optimizer'] = optimizer
+
+    scheduler = instantiate_from_dict(namespace=optim.lr_scheduler,
+                                      information=extra_scheduler_config)
+
+    if verbose:
+        print("Initialized scheduler.")
+    
+    return scheduler
 
 def get_command_line_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -128,27 +129,30 @@ if __name__ == '__main__':
 
     verbose = args.verbose
     overwrite_mode = args.overwrite
+    save_mode = args.savemode
+
+
     model_name = args.name
 
     model_dir = args.modeldir
-    config_dir = args.config
+    config_path = args.config
     log_dir = args.logdir
     dataset_dir = args.datadir 
     demo_config_path = args.democonfig
 
     num_epochs = args.epochs
-    save_mode = args.savemode
 
     # Set up device
     # --------------
 
-    device : torch.device = get_device(verbose=verbose)
+    device = get_device(verbose=verbose)
 
     # Location of model/config savefiles
     # ----------------------------------
 
-    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
-                                                                            model_name=model_name)
+    state_save_file_path, \
+    config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
+                                                      model_name=model_name)
 
     # Load the config files
     # ---------------------
@@ -157,55 +161,56 @@ if __name__ == '__main__':
     if config_save_file_path.exists() and (not overwrite_mode):
         if verbose:
             print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
-        config = load_config(config_save_file_path)
+        config = load_json5(config_save_file_path)
     else:
-        print(f"\nConfig files: {config_dir.absolute()}")
-        config = load_config(config_dir)
+        print(f"\nConfig file path: {config_path.absolute()}")
+        config = load_json5(config_path)
 
     demo_config = None
     if demo_config_path is not None:
-        demo_config = load_config(demo_config_path)
+        demo_config = load_json5(demo_config_path)
 
     # Set up TensorBoard writer
     # -------------------------
+
     if verbose:
         print(f"TensorBoard log dir: {log_dir}")
     writer = SummaryWriter(log_dir)
 
     # Set up data loaders
     # -------------------
-
-    transform_config = config['augmentation']['transforms']
     
     if verbose:
         print(f"Training Data: {dataset_dir}")
 
-    color_to_label = config['data']['color_to_label']
-
-    training_config = config['training']
-    batch_size = training_config['batch_size']
-    train_test_split = training_config['train_test_split']
-    batches_per_epoch = training_config['batches_per_epoch']
-    batches_per_test = training_config['batches_per_test']
-
+    data_config = config['data']
     patch_size = config['model']['patch_size']
 
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
-                                                 transform_config=transform_config,
-                                                 color_to_label=color_to_label,
-                                                 batch_size=batch_size,
-                                                 train_test_split=train_test_split,
+                                                 augmentation_config=config['augmentation'],
+                                                 **data_config,
                                                  verbose=verbose)
 
     # Initialize model, loss function, optimizer, and scheduler
     # ---------------------------------------------------------
 
-    model, criterion, optimizer, scheduler = create_model_criterion_optimizer_scheduler(model_config=config['model'],
-                                                                                        training_config=config['training'],
-                                                                                        loss_config=config['loss'],
-                                                                                        device=device,
-                                                                                        verbose=verbose)
+    model = get_model(model_config=config['model'],
+                      device=device,
+                      verbose=verbose)
+    
+    criterion = get_criterion(criterion_config=config['criterion'],
+                              device=device,
+                              Labels=Labels,
+                              verbose=verbose)
+
+    optimizer = get_optimizer(model=model,
+                              optimizer_config=config['optimizer'],
+                              verbose=verbose)
+
+    scheduler = get_scheduler(optimizer=optimizer,
+                              scheduler_config=config['scheduler'],
+                              verbose=verbose)
 
     # Check if savefile exists
     # ------------------------
@@ -277,7 +282,6 @@ if __name__ == '__main__':
                         criterion=criterion,
                         optimizer=optimizer,
                         epoch=epoch,
-                        num_batches=batches_per_epoch,
                         verbose=verbose)
 
             test_loss = test_model(model=model, 
@@ -286,7 +290,6 @@ if __name__ == '__main__':
                                     epoch=epoch,
                                     test_loader=test_loader, 
                                     criterion=criterion,
-                                    num_batches=batches_per_test,
                                     verbose=verbose)
 
             if verbose:
@@ -298,21 +301,21 @@ if __name__ == '__main__':
                 if verbose:
                     print(f"This is a historical best test loss.")
                     if save_mode == 'best':
-                        print(f"We are in best savemode - so it will be saved to file.")
+                        print(f"We are in 'best' savemode - so it will be saved to file.")
                 best_test_loss = test_loss
                 historical_best = True
                     
             scheduler.step()
 
             if historical_best or save_mode == 'recent':
-                save_model(model=model,
-                            config=config,
-                            optimizer=optimizer,
-                            scheduler=scheduler, 
-                            model_dir=model_dir,
-                            model_name=model_name,
-                            epoch=epoch,
-                            verbose=verbose)
+                save_model_to_file(model=model,
+                                config=config,
+                                optimizer=optimizer,
+                                scheduler=scheduler, 
+                                model_dir=model_dir,
+                                model_name=model_name,
+                                epoch=epoch,
+                                verbose=verbose)
 
             if demo_config is not None:
                 plot_demos(demo_config=demo_config,

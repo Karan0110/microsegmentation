@@ -20,7 +20,7 @@
       "params": {
         "scale_limit": 0.5,  // Scaling factor range (default 0.1)
         "interpolation": 1,  // Interpolation method, e.g., 1: Linear, 0: Nearest
-        "p": 0.5
+        // "p": 0.5
       }
     },
     {
@@ -34,11 +34,11 @@
     {
       "name": "GaussNoise",
       "params": {
-        "var_limit": [10.0, 200.0],  // Variance range of the noise
+        "var_limit": [10.0, 100.0],  // Variance range of the noise
         "mean": 0,                  // Mean of the noise
         "per_channel": true,        // Apply noise per channel
         "noise_scale_factor": 1,    // Scaling factor for the noise
-        // "p": 0.5
+        "p": 0.5
       }
     },
     {

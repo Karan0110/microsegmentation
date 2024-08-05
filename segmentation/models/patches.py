@@ -2,13 +2,8 @@ from typing import Tuple
 
 import numpy as np
 
-from PIL import Image
-
-import torch
-import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
-import torchvision.transforms as transforms
 
 #Returns tensor of shape (num_patches, channels, height, width)
 #The patches are ordered lexicographically, e.g.

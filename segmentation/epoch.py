@@ -18,7 +18,6 @@ def train_model(model : nn.Module,
                 optimizer : Optimizer, 
                 epoch : int,
                 writer : SummaryWriter,
-                num_batches : Union[int, None],
                 verbose : bool = False) -> None:
     model.to(device)
 
@@ -26,9 +25,6 @@ def train_model(model : nn.Module,
     running_count : int = 0
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
-        if num_batches is not None and batch_idx >= num_batches:
-            break
-    
         inputs, targets = inputs.to(device), targets.to(device)
 
         model.train()
@@ -59,7 +55,6 @@ def test_model(model : nn.Module,
                criterion : nn.Module, 
                writer : SummaryWriter,
                epoch : int,
-               num_batches : Union[int, None],
                verbose : bool = False) -> float:
     model.to(device)
 
@@ -70,9 +65,6 @@ def test_model(model : nn.Module,
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             model.eval()
-
-            if num_batches is not None and batch_idx >= num_batches:
-                break
 
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)

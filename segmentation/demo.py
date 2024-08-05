@@ -15,9 +15,9 @@ from PIL import Image
 import torch
 import torch.nn as nn
 
-from inference import get_segmentation, get_hard_segmentation
-from file_io import load_config, load_model, get_model_save_file_paths
-from device import get_device
+from models.inference import get_segmentation, get_hard_segmentation
+from utils import load_json5, get_device
+from models.serialization import load_model_from_file, get_model_save_file_paths
 
 def load_grayscale_image(image_file_path : Path) -> np.ndarray:
     image = np.array(Image.open(image_file_path).convert('L'))
@@ -33,7 +33,6 @@ def get_demo_information(model : nn.Module,
                          patch_size : int,
                          verbose : bool,
                          hard_segmentation_threshold : float,
-                         use_caching : bool = False,
                          model_file_path : Union[Path, None] = None) -> Tuple[np.ndarray, Union[np.ndarray, None], np.ndarray, np.ndarray]:
     image = load_grayscale_image(image_file_path=image_file_path)
     if label_file_path is not None:
@@ -44,10 +43,7 @@ def get_demo_information(model : nn.Module,
     segmentation = get_segmentation(image=image,
                                     model=model,
                                     device=device,
-                                    patch_size=patch_size,
-                                    use_caching=use_caching,
-                                    image_file_path=image_file_path,
-                                    model_file_path=model_file_path)
+                                    patch_size=patch_size).to('cpu').numpy()
 
     hard_segmentation = get_hard_segmentation(segmentation=segmentation,
                                               segmentation_threshold=hard_segmentation_threshold) #type: ignore
@@ -111,7 +107,6 @@ def plot_demo(demo_config : dict,
                                                                          patch_size=patch_size,
                                                                          hard_segmentation_threshold=hard_segmentation_threshold,
                                                                          verbose=False,
-                                                                         use_caching=True,
                                                                          model_file_path=model_file_path)
                                                                         
     plot_rows = 2 if (label is None) else 3
@@ -268,7 +263,7 @@ if __name__ == '__main__':
 
     #  Load the demo config file
     demo_config_file_path = args.config
-    demo_config = load_config(demo_config_file_path)
+    demo_config = load_json5(demo_config_file_path)
 
     # hard segmentation threshold
     hard_segmentation_threshold = args.threshold
@@ -282,13 +277,13 @@ if __name__ == '__main__':
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
                                                                             model_name=model_name)
 
-    model, model_config = load_model(model_file_path=state_save_file_path,
+    model, model_config = load_model_from_file(model_file_path=state_save_file_path,
                                      config_file_path=config_save_file_path)
     patch_size = model_config['patch_size']
     device = get_device(verbose=verbose)
         
     plot_demos(demo_config=demo_config,
-               demo_name=model_name,
+               model_name=model_name,
                hard_segmentation_threshold=hard_segmentation_threshold,
                model=model,
                model_dir=model_dir,

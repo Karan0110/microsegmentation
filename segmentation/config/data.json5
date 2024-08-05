@@ -1,4 +1,11 @@
 {
+    "train_test_split": 0.8,
+
+    "batch_size": 2,  //TESTING
+
+    "max_batches_per_train_epoch": 2, //TESTING
+    "max_batches_per_test": 2, //TESTING
+
     "color_to_label": {
         "0": "DEPOLYMERIZED",
         "255": "POLYMERIZED",

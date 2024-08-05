@@ -7,10 +7,6 @@
         "nom_input_vtk_ref": "Cylinder_10000_EqualNucleation.vtk",
         "nom_input_vtk_ref_2": "Cylinder_10000_EqualNucleation.vtk",
 
-        //Make sure these are equal to avoid wasted vtk savefiles (they are just deleted!)
-        "vtk_steps": "5",
-        "nb_max_steps": "5",
-
         //Any positive number
         "Angle_bundle": "0.7",
         "Angle_cut": "0.6",

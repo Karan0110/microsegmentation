@@ -1,10 +1,11 @@
 from typing import Union, Tuple
-from pathlib import Path
 
 import torch
 import torch.nn as nn
 
 # Example usage
+# --------------
+#
 # if __name__ == '__main__':
 #     model = UNet(depth=4,
 #                 base_channel_num=64,
@@ -12,10 +13,11 @@ import torch.nn as nn
 #                 out_channels=3)
 #     input_tensor = torch.randn(1, 1, 512, 512)  # Example input tensor
 #     output_tensor = model(input_tensor)
-
+# 
 #     print("Output shape:", output_tensor.shape)
+# 
 
-def crop_and_concat(feature_map1: torch.Tensor, 
+def _crop_and_concat(feature_map1: torch.Tensor, 
                     feature_map2: torch.Tensor) -> torch.Tensor:
     _, _, h1, w1 = feature_map1.size()
     _, _, h2, w2 = feature_map2.size()
@@ -29,7 +31,6 @@ def crop_and_concat(feature_map1: torch.Tensor,
     
     return torch.cat((cropped_feature_map1, feature_map2), dim=1)
 
-#NOTE: Input image shape should be divisible by 2**depth
 class UNet(nn.Module):
     def __init__(self,
                  depth : int,
@@ -196,8 +197,8 @@ class UNet(nn.Module):
         x = self.bridge_layer(x)
 
         for current_depth in range(self.depth):
-            x = crop_and_concat(residuals[current_depth],
-                                x)
+            x = _crop_and_concat(feature_map1=residuals[current_depth], 
+                                 feature_map2=x)
             up_layer = self.up_layers[current_depth]
             x = up_layer(x)
         

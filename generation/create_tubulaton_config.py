@@ -62,7 +62,7 @@ def generate_config_dict(tubulaton_config : dict,
     for param in prob_params:
         orig_value = float(tubulaton_parameters[param])
 
-        new_value = orig_value * (np.random.random() * 2 + 0.3)
+        new_value = orig_value * (np.random.random() + 0.1)
         new_value = np.clip(new_value, a_min=0., a_max=1.)
 
         tubulaton_parameters[param] = str(new_value)

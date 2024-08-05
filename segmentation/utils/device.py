@@ -1,7 +1,6 @@
 import torch
 
 def get_device(verbose : bool) -> torch.device:
-    # General device handling: Check for CUDA/GPU, else fallback to CPU
     if torch.cuda.is_available():
         device = torch.device('cuda')
         device_name = torch.cuda.get_device_name(0)

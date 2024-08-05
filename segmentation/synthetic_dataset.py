@@ -10,7 +10,6 @@ from PIL import Image
 
 import torch
 
-import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 
 import albumentations as A
@@ -32,12 +31,11 @@ class Labels(Enum):
     DEPOLYMERIZED = 1
 
 class SyntheticDataset(Dataset):
-    train_test_split=0.8
-    
     def __init__(self, 
                  base_dir : Path, 
                  color_to_label : dict,
-                 transform : Union[Callable, None] = None) -> None:
+                 transform : Union[Callable, None] = None,
+                 max_batches : Union[None, int] = None) -> None:
         super().__init__()
 
         self.base_dir : Path = base_dir
@@ -46,7 +44,7 @@ class SyntheticDataset(Dataset):
         self.color_to_label_index = {color : Labels[self.color_to_label[color]].value for color in self.color_to_label}
 
         self.transform = transform
-        
+
         images_index_range = self._get_index_range(dir_path=base_dir / 'Images',
                                                    file_name_stem="image")
         labels_index_range = self._get_index_range(dir_path=base_dir / 'Labels',
@@ -57,6 +55,11 @@ class SyntheticDataset(Dataset):
                                  Labels: {labels_index_range}
                              """)
         self.index_range = images_index_range
+
+        if max_batches is not None:
+            new_max = min(max(self.index_range), min(self.index_range) + max_batches - 1)
+
+            self.index_range = range(min(self.index_range), new_max+1)
 
     def _get_index_range(self, 
                          dir_path : Path,
@@ -125,9 +128,11 @@ class SyntheticDataset(Dataset):
 
 def get_data_loaders(base_dir : Path, 
                      patch_size : int,
-                     transform_config : list,
+                     augmentation_config : dict,
                      color_to_label : dict,
                      train_test_split : float,
+                     max_batches_per_train_epoch : Union[int, None],
+                     max_batches_per_test : Union[int, None],
                      batch_size : int,
                      verbose : bool) -> Tuple[DataLoader, DataLoader]:
     # Preprocess color_to_label to appropriate form
@@ -136,7 +141,7 @@ def get_data_loaders(base_dir : Path,
     # Create transformation pipeline
     transform_list = []
 
-    for item in transform_config:
+    for item in augmentation_config['transforms']:
         transform_type = item['name']
         transform_class = getattr(A, transform_type)
         transform = transform_class(**item['params'])
@@ -149,16 +154,25 @@ def get_data_loaders(base_dir : Path,
     transform = A.Compose(transforms=transform_list)
 
     # Create the dataset
+    if max_batches_per_test is not None and max_batches_per_train_epoch is not None:
+        max_batches = max_batches_per_train_epoch + max_batches_per_test
+    else:
+        max_batches = None
+
     dataset = SyntheticDataset(base_dir=base_dir, 
                                transform=transform,
-                               color_to_label=color_to_label)
+                               color_to_label=color_to_label,
+                               max_batches=max_batches)
 
     # Define the lengths for train and test splits
+    # We don't just use proportions in the lengths argument since it breaks when the sizes are small 
+    # (i.e. when running tests)
     train_size = int(train_test_split * len(dataset))
     test_size = len(dataset) - train_size
 
     # Split the dataset into train and test sets
-    train_set, test_set = random_split(dataset, [train_size, test_size])
+    train_set, test_set = random_split(dataset=dataset, 
+                                       lengths=(train_size, test_size))
 
     # Create DataLoaders
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
