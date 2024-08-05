@@ -29,10 +29,9 @@ def get_model(model_config : dict,
     model = model.to(device)
 
     if verbose:
-        print(f"Created {model_name} model.")
+        print(f"\nCreated {model_name} model.")
 
     return model
-    
 
 def get_optimizer(model : nn.Module,
                   optimizer_config : dict,
@@ -44,7 +43,7 @@ def get_optimizer(model : nn.Module,
                                       information=extra_optimizer_config)
 
     if verbose:
-        print(f"Initialized optimizer.")
+        print(f"\nInitialized optimizer.")
 
     return optimizer
 
@@ -58,7 +57,7 @@ def get_scheduler(optimizer : optim.Optimizer,
                                       information=extra_scheduler_config)
 
     if verbose:
-        print("Initialized scheduler.")
+        print("\nInitialized scheduler.")
     
     return scheduler
 
@@ -316,8 +315,10 @@ if __name__ == '__main__':
                                 model_name=model_name,
                                 epoch=epoch,
                                 verbose=verbose)
+                print("\nSaved to file.")
 
             if demo_config is not None:
+                print("\nPlotting demo...")
                 plot_demos(demo_config=demo_config,
                            demo_name=f"{model_name}_epoch_{epoch}",
                            model_name=model_name,
@@ -329,7 +330,7 @@ if __name__ == '__main__':
                            verbose=False,
                            save_to_file=True)
 
-            print(f"Took {(time.time() - epoch_start_time) / 60.:.2f} minutes")
+            print(f"\nTook {(time.time() - epoch_start_time) / 60.:.2f} minutes")
         except KeyboardInterrupt:
             print(f"\nInterrupted during epoch {epoch}.")
             break

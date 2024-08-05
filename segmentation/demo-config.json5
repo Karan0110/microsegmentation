@@ -1,6 +1,6 @@
 {
     "demo_save_dir": "/Users/karan/microsegmentation/segmentation/demos/",
-    "model_dir": "/Users/karan/microsegmentation/Models/",
+    "model_dir": "/Users/karan/microsegmentation/ModelSaveFiles/",
 
     "shuffle_data": false,
     "max_num_demos": null,

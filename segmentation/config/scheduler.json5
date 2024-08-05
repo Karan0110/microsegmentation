@@ -2,7 +2,8 @@
     "name": "StepLR",
 
     "params": {
-        "step_size": 30, 
+        //A hacky way to disable it (set it to bign number)
+        "step_size": 1000000, 
         "gamma": 0.1,
     },
 }

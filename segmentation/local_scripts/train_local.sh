@@ -20,7 +20,7 @@ program_path="$segmentation_dir/train.py"
 
 data_dir="/Users/karan/MTData/Synthetic/"
 log_dir="$segmentation_dir/runs/"
-model_dir="$base_dir/Models/"
+model_dir="$base_dir/ModelSaveFiles/"
 config_path="$segmentation_dir/config/"
 demo_config_path="$segmentation_dir/demo-config.json5"
 
