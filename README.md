@@ -66,6 +66,7 @@ The `segmentation` module consists of 2 executable files:
 
 You can see a list of parameters and explanations of them by running `python [insert file] -h`
 
+
 Some notes on parameters for `train.py`:
 
 * The model name can be any string that forms a valid filename. Some example names:
@@ -73,6 +74,8 @@ Some notes on parameters for `train.py`:
 	* `model-focal-loss` 
 * All of the filepaths can be wherever you want (the program will create them if they don't exist already) with the exception of `--datadir`:
 	* This must be the location of the synthetic data produced by the `generation` pipeline
+	
+**Note**: If you want to use the `run_train.sh` - make sure to change all the directories to reflect your local filesystem!
 
 Some notes on the config files:
 
