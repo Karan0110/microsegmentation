@@ -4,10 +4,10 @@ import torch.nn.functional as F
 
 class TverskyLoss(nn.Module):
     def __init__(self,
-                    alpha: float,
-                    beta : float,
-                    foreground_label : int,
-                    eps: float = 1e-6) -> None:
+                 alpha: float,
+                 beta : float,
+                 foreground_label : int,
+                 eps: float = 1e-7) -> None:
         super().__init__()
 
         self.alpha = alpha

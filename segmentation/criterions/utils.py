@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List, Tuple
 from enum import Enum
 
 import torch
@@ -22,10 +22,9 @@ def weight_dict_to_tensor(raw_weights : dict,
 
     return weights
 
-def get_criterion(criterion_config : dict,
+def _get_criterion(criterion_config : dict,
                   device : torch.device,
-                  Labels,
-                  verbose : bool = True) -> nn.Module:
+                  Labels) -> nn.Module:
     criterion_name = criterion_config['name']
 
     raw_criterion_params = criterion_config['params']
@@ -58,7 +57,28 @@ def get_criterion(criterion_config : dict,
     criterion : nn.Module = LossFunction(**new_criterion_params)
     criterion = criterion.to(device)
 
-    if verbose:
-        print(f"Initialized {criterion_name} criterion")
-
     return criterion
+
+def get_criterions(criterions_config : List[dict],
+                   device : torch.device,
+                   Labels,
+                   verbose : bool = False) -> List[dict]:
+    criterions : List[dict] = []
+
+    for criterion_config in criterions_config:
+        weight = criterion_config.get('weight', 1.0)
+        criterion = _get_criterion(criterion_config=criterion_config,
+                                   device=device,
+                                   Labels=Labels)
+        name = criterion_config['name']
+
+        criterions.append({
+            'criterion': criterion,
+            'weight': weight,
+            'name': name,
+        })
+
+        if verbose:
+            print(f"Initialized {name} criterion with weight {weight}")
+
+    return criterions

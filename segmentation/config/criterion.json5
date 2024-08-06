@@ -1,7 +1,0 @@
-{
-    "name": "FocalLoss",
-
-    "params": {
-        "gamma": 2.0,
-    }
-}

@@ -1,6 +1,6 @@
 absl-py==2.1.0
-albucore==0.0.12
-albumentations==1.4.12
+albucore==0.0.13
+albumentations==1.4.13
 annotated-types==0.7.0
 contourpy==1.2.1
 cycler==0.12.1

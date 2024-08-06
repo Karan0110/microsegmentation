@@ -1,7 +1,7 @@
 {
     "train_test_split": 0.8,
 
-    "batch_size": 3,  //TESTING
+    "batch_size": 1,  //TESTING
 
     "max_batches_per_train_epoch": null, //TESTING
     "max_batches_per_test": null, //TESTING

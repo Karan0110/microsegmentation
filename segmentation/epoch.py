@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List, Tuple, Dict
 from pathlib import Path
 
 import torch
@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 def train_model(model : nn.Module, 
                 device : torch.device, 
                 train_loader : DataLoader, 
-                criterion : nn.Module,  
+                criterions : List[dict],
                 optimizer : Optimizer, 
                 epoch : int,
                 writer : SummaryWriter,
@@ -33,7 +33,9 @@ def train_model(model : nn.Module,
 
         outputs = model(inputs)
 
-        loss = criterion(outputs, targets)
+        loss = torch.tensor(0.0).to(device)
+        for criterion in criterions:
+            loss += criterion['criterion'](outputs, targets) * criterion['weight']
         loss.backward()
     
         optimizer.step()
@@ -52,13 +54,13 @@ def train_model(model : nn.Module,
 def test_model(model : nn.Module, 
                device : torch.device, 
                test_loader : DataLoader, 
-               criterion : nn.Module, 
+               criterions : List[dict],
                writer : SummaryWriter,
                epoch : int,
                verbose : bool = False) -> float:
     model.to(device)
 
-    running_loss = 0.0
+    running_losses = {criterion['name']: 0.0 for criterion in criterions}
 
     running_count = 0
 
@@ -68,17 +70,28 @@ def test_model(model : nn.Module,
 
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
-            loss = criterion(outputs, targets)
 
-            running_loss += loss.item()
+            for criterion in criterions:
+                loss = criterion['criterion'](outputs, targets)
+                running_losses[criterion['name']] += loss.item()
+
             running_count += inputs.size(0)
 
+    test_losses = {name: loss/running_count for name, loss in running_losses.items()}
 
-    test_loss = running_loss / running_count
+    for name in test_losses:
+        running_losses[name] /= running_count
 
-    writer.add_scalar('loss/test',
-                      scalar_value=test_loss,
-                      global_step=epoch)
+        writer.add_scalar(f'loss/{name}',
+                        scalar_value=running_losses[name],
+                        global_step=epoch)
     writer.flush()
+
+    test_loss = 0.0
+    for criterion in criterions:
+        weight = criterion['weight']
+        loss = test_losses[criterion['name']]
+
+        test_loss += weight * loss
 
     return test_loss

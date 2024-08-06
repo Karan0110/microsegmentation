@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 import json5
 
 import torch
 
-def _load_json5_file(file_path : Path) -> dict:
+def _load_json5_file(file_path : Path) -> Union[list,dict]:
     with open(file_path, 'r', encoding='utf-8') as f:
         contents = json5.load(f)
     
-    if not isinstance(contents, dict):
-        raise ValueError(f"JSON5 file {file_path} is of invalid format - should be a dict")
+    if not (isinstance(contents, dict) or isinstance(contents, list)):
+        raise ValueError(f"JSON5 file {file_path} is of invalid format - should be a dict or list")
 
     return contents
 
@@ -26,7 +26,7 @@ def _update_nested_dict_from_path(root, sub_path, value) -> None:
 
     current[last_part] = value
 
-def load_json5(path: Path) -> dict:
+def load_json5(path: Path) -> Union[dict, list]:
     data = {}
     
     if path.is_file() and path.suffix == '.json5':

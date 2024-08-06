@@ -52,9 +52,3 @@ def visualize(points : np.ndarray,
     fig.tight_layout()
 
     plt.show()
-
-if __name__ == '__main__':
-    # Define the points
-    points = np.random.normal(loc=0., scale=1., size=(1000,3))
-
-    visualize(points)

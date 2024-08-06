@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse
 import json5
 import time
-from typing import Iterable, Tuple, Any
+from typing import Iterable, Tuple, Any, Union
 import itertools
 import shutil
 import copy
@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from epoch import train_model, test_model
 from synthetic_dataset import get_data_loaders, Labels
-from criterions.utils import get_criterion
+from criterions.utils import get_criterions
 from demo import plot_demos
 from utils import instantiate_from_dict, load_json5, get_device
 from models.serialization import get_model_save_file_paths, save_model_to_file
@@ -130,7 +130,6 @@ if __name__ == '__main__':
     overwrite_mode = args.overwrite
     save_mode = args.savemode
 
-
     model_name = args.name
 
     model_dir = args.modeldir
@@ -156,7 +155,7 @@ if __name__ == '__main__':
     # Load the config files
     # ---------------------
 
-    config : dict
+    config : Union[dict, list]
     if config_save_file_path.exists() and (not overwrite_mode):
         if verbose:
             print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
@@ -164,10 +163,14 @@ if __name__ == '__main__':
     else:
         print(f"\nConfig file path: {config_path.absolute()}")
         config = load_json5(config_path)
+    if not isinstance(config, dict):
+        raise ValueError(f"Invalid config file! Must be a dict")
 
     demo_config = None
     if demo_config_path is not None:
         demo_config = load_json5(demo_config_path)
+    if not isinstance(demo_config, dict):
+        raise ValueError(f"Invalid demo config file! Must be a dict")
 
     # Set up TensorBoard writer
     # -------------------------
@@ -198,10 +201,10 @@ if __name__ == '__main__':
                       device=device,
                       verbose=verbose)
     
-    criterion = get_criterion(criterion_config=config['criterion'],
-                              device=device,
-                              Labels=Labels,
-                              verbose=verbose)
+    criterions = get_criterions(criterions_config=config['criterions'],
+                               device=device,
+                               Labels=Labels,
+                               verbose=verbose)
 
     optimizer = get_optimizer(model=model,
                               optimizer_config=config['optimizer'],
@@ -278,7 +281,7 @@ if __name__ == '__main__':
                         device=device,
                         writer=writer,
                         train_loader=train_loader,
-                        criterion=criterion,
+                        criterions=criterions,
                         optimizer=optimizer,
                         epoch=epoch,
                         verbose=verbose)
@@ -288,7 +291,7 @@ if __name__ == '__main__':
                                     writer=writer,
                                     epoch=epoch,
                                     test_loader=test_loader, 
-                                    criterion=criterion,
+                                    criterions=criterions,
                                     verbose=verbose)
 
             if verbose:
@@ -328,6 +331,7 @@ if __name__ == '__main__':
                            model_config=config['model'],
                            device=device,
                            verbose=False,
+                           only_show_histogram=True,
                            save_to_file=True)
 
             print(f"\nTook {(time.time() - epoch_start_time) / 60.:.2f} minutes")

@@ -17,6 +17,7 @@ param_sweep_config_files/
 param_sweep_config_files_test/
 
 ModelSaveFiles/
+Notes/
 demos/
 Standard_Demo/
 runs/

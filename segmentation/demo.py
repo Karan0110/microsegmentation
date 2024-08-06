@@ -94,6 +94,7 @@ def plot_demo(demo_config : dict,
               hard_segmentation_threshold : float,
               save_to_file : bool,
               verbose : bool = True,
+              only_show_histogram : bool = False,
               save_file_dir : Union[Path, None] = None) -> None:
     if verbose:
         print(f"\nShowing demo of model: {model_file_path} on image:")
@@ -109,64 +110,65 @@ def plot_demo(demo_config : dict,
                                                                          verbose=False,
                                                                          model_file_path=model_file_path)
                                                                         
-    plot_rows = 2 if (label is None) else 3
-    plot_cols = 2
-    fig, axs = plt.subplots(plot_rows, plot_cols)#, figsize=(10 * plot_cols, 2 * plot_rows))
-    axs = axs.flatten()
-    axs_index = 0
+    if not only_show_histogram:                                        
+        plot_rows = 2 if (label is None) else 3
+        plot_cols = 2
+        fig, axs = plt.subplots(plot_rows, plot_cols)#, figsize=(10 * plot_cols, 2 * plot_rows))
+        axs = axs.flatten()
+        axs_index = 0
 
-    for ax in axs:
-        ax.axis('off')
+        for ax in axs:
+            ax.axis('off')
 
-    axs[axs_index].imshow(image, cmap='gray') #type: ignore
-    axs[axs_index].axis('off') #type: ignore
-    axs[axs_index].set_title("Image") #type: ignore
-    axs_index += 1 #type: ignore
-
-    colored_segmentation = get_colored_image(segmentation)
-    axs[axs_index].imshow(colored_segmentation) #type: ignore
-    axs[axs_index].axis('off') #type: ignore
-    axs[axs_index].set_title("Soft Segmentation") #type: ignore
-    axs_index += 1 #type: ignore
-
-    axs[axs_index].imshow(hard_segmentation, cmap='gray') #type: ignore
-    axs[axs_index].axis('off') #type: ignore
-    axs[axs_index].set_title(f"Hard Segmentation\n(Threshold {hard_segmentation_threshold})") #type: ignore
-    axs_index += 1 #type: ignore
-
-    colored_hard_segmentation = get_colored_image(hard_segmentation)
-    axs[axs_index].imshow(colored_hard_segmentation) #type: ignore
-    axs[axs_index].imshow(image, cmap='gray', alpha=0.7) #type: ignore
-    axs[axs_index].axis('off') #type: ignore
-    axs[axs_index].set_title("Hard Segmentation Overlaid") #type: ignore
-    axs_index += 1 #type: ignore
-
-    if label is not None:
-        axs[axs_index].imshow(label, cmap='gray') #type: ignore
+        axs[axs_index].imshow(image, cmap='gray') #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Ground Truth") #type: ignore
+        axs[axs_index].set_title("Image") #type: ignore
         axs_index += 1 #type: ignore
 
-        colored_label = get_colored_image(label)
-        axs[axs_index].imshow(colored_label) #type: ignore
+        colored_segmentation = get_colored_image(segmentation)
+        axs[axs_index].imshow(colored_segmentation) #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title("Soft Segmentation") #type: ignore
+        axs_index += 1 #type: ignore
+
+        axs[axs_index].imshow(hard_segmentation, cmap='gray') #type: ignore
+        axs[axs_index].axis('off') #type: ignore
+        axs[axs_index].set_title(f"Hard Segmentation\n(Threshold {hard_segmentation_threshold})") #type: ignore
+        axs_index += 1 #type: ignore
+
+        colored_hard_segmentation = get_colored_image(hard_segmentation)
+        axs[axs_index].imshow(colored_hard_segmentation) #type: ignore
         axs[axs_index].imshow(image, cmap='gray', alpha=0.7) #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Ground Truth Overlaid") #type: ignore
+        axs[axs_index].set_title("Hard Segmentation Overlaid") #type: ignore
         axs_index += 1 #type: ignore
 
-    if save_to_file:
-        if save_file_dir is None:
-            raise ValueError(f"No save file dir provided!")
+        if label is not None:
+            axs[axs_index].imshow(label, cmap='gray') #type: ignore
+            axs[axs_index].axis('off') #type: ignore
+            axs[axs_index].set_title("Ground Truth") #type: ignore
+            axs_index += 1 #type: ignore
 
-        save_file_path = save_file_dir / f"DEMO_{image_file_path.stem}.png"
- 
-        plt.savefig(save_file_path, 
-                    format='png',
-                    dpi=800)
-        if verbose:
-            print(f"\nSaved demo to {save_file_path}")
-    else:
-        plt.show()
+            colored_label = get_colored_image(label)
+            axs[axs_index].imshow(colored_label) #type: ignore
+            axs[axs_index].imshow(image, cmap='gray', alpha=0.7) #type: ignore
+            axs[axs_index].axis('off') #type: ignore
+            axs[axs_index].set_title("Ground Truth Overlaid") #type: ignore
+            axs_index += 1 #type: ignore
+
+        if save_to_file:
+            if save_file_dir is None:
+                raise ValueError(f"No save file dir provided!")
+
+            save_file_path = save_file_dir / f"DEMO_{image_file_path.stem}.png"
+    
+            plt.savefig(save_file_path, 
+                        format='png',
+                        dpi=800)
+            if verbose:
+                print(f"\nSaved demo to {save_file_path}")
+        else:
+            plt.show()
 
     # Show histogram of segmentation probabilities
     plt.clf()
@@ -198,6 +200,7 @@ def plot_demos(demo_config : dict,
                device : torch.device,
                verbose : bool,
                save_to_file : bool,
+               only_show_histogram : bool = False,
                demo_name : Optional[str] = None) -> None:
     if demo_name is None:
         demo_name = model_name
@@ -222,6 +225,7 @@ def plot_demos(demo_config : dict,
                 hard_segmentation_threshold=hard_segmentation_threshold,
                 label_file_path=label_file_path,
                 save_file_dir=demo_save_dir,
+                only_show_histogram=only_show_histogram,
                 verbose=verbose,
                 save_to_file=save_to_file)
 
@@ -251,6 +255,11 @@ if __name__ == '__main__':
                         action='store_true', 
                         help='Increase output verbosity')
 
+    parser.add_argument('-dn', '--demoname',
+                        type=str,
+                        default=None,
+                        help="Name of demo save file (Leave blank to use same name as model)")
+
     parser.add_argument('--show', 
                         action='store_true', 
                         help='Show demos in window instead of saving to files')
@@ -264,6 +273,8 @@ if __name__ == '__main__':
     #  Load the demo config file
     demo_config_file_path = args.config
     demo_config = load_json5(demo_config_file_path)
+    if not isinstance(demo_config, dict):
+        raise ValueError(f"Invalid demo config! Must be a dict")
 
     # hard segmentation threshold
     hard_segmentation_threshold = args.threshold
@@ -277,9 +288,10 @@ if __name__ == '__main__':
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
                                                                             model_name=model_name)
 
-    model, model_config = load_model_from_file(model_file_path=state_save_file_path,
+    model, config = load_model_from_file(model_file_path=state_save_file_path,
                                      config_file_path=config_save_file_path)
-    patch_size = model_config['patch_size']
+                        
+    patch_size = config['model']['patch_size']
     device = get_device(verbose=verbose)
         
     plot_demos(demo_config=demo_config,
@@ -287,7 +299,7 @@ if __name__ == '__main__':
                hard_segmentation_threshold=hard_segmentation_threshold,
                model=model,
                model_dir=model_dir,
-               model_config=model_config,
+               model_config=config['model'],
                device=device,
                verbose=verbose,
                save_to_file=(not show_mode))

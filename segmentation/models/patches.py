@@ -10,18 +10,22 @@ import torch.nn.functional as F
 # 0 1 2
 # 3 4 5
 def get_image_patches(image : Tensor, 
-                      patch_size : Tuple[int,int]) -> Tensor:
+                      patch_size : Tuple[int,int],
+                      padding_mode : str = 'zeros') -> Tensor:
     # batch, channels, height, width
     b, c, h, w = image.shape
     patch_h, patch_w = patch_size
     
-    # Apply circular padding
+    # Apply padding
     pad_h = (patch_h - (h % patch_h)) % patch_h
     pad_w = (patch_w - (w % patch_w)) % patch_w
 
     padded_image = None
     if pad_h > 0 or pad_w > 0:
-        padded_image = F.pad(image, (0, pad_w, 0, pad_h), mode='circular')
+        if padding_mode == 'zeros':
+            padded_image = F.pad(image, (0, pad_w, 0, pad_h), mode='constant', value=0)
+        else:
+            padded_image = F.pad(image, (0, pad_w, 0, pad_h), mode=padding_mode)
     else:
         padded_image = image
 

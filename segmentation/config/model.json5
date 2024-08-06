@@ -1,6 +1,6 @@
 {
     "name": "UNet",
-    "patch_size": 256, //TESTING default: 128
+    "patch_size": 512, //TESTING default: 512
 
     "params": {
         "depth": 4,  //TESTING default 4
