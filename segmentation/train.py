@@ -15,7 +15,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from epoch import train_model, test_model
-from synthetic_dataset import get_data_loaders, Labels
+from utils.synthetic_dataset import get_data_loaders, Labels
 from criterions.utils import get_criterions
 from demo import plot_demos
 from utils import instantiate_from_dict, load_json5, get_device
@@ -30,6 +30,8 @@ def get_model(model_config : dict,
 
     if verbose:
         print(f"\nCreated {model_name} model.")
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f"It has {total_params} parameters.")
 
     return model
 
@@ -134,7 +136,7 @@ if __name__ == '__main__':
 
     model_dir = args.modeldir
     config_path = args.config
-    log_dir = args.logdir
+    log_dir = args.logdir / model_name
     dataset_dir = args.datadir 
     demo_config_path = args.democonfig
 
@@ -169,7 +171,7 @@ if __name__ == '__main__':
     demo_config = None
     if demo_config_path is not None:
         demo_config = load_json5(demo_config_path)
-    if not isinstance(demo_config, dict):
+    if not isinstance(demo_config, dict) and demo_config is not None:
         raise ValueError(f"Invalid demo config file! Must be a dict")
 
     # Set up TensorBoard writer

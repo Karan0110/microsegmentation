@@ -1,7 +1,7 @@
 [ 
     {
         "name": "FocalLoss",
-        "weight": 0.0,
+        "weight": 0.6,
 
         "params": {
             "gamma": 2.0,
@@ -9,11 +9,11 @@
     },
     {
         "name": "TverskyLoss",
-        "weight": 1.0,
+        "weight": 0.4,
 
         "params": {
-            "alpha": 0.5,
-            "beta": 0.5,
+            "alpha": 0.4,
+            "beta": 0.6,
         }
     },
 ]

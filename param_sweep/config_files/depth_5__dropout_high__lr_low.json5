@@ -1,0 +1,120 @@
+{
+    model: {
+        name: "UNet",
+        patch_size: 512,
+        params: {
+            depth: 5,
+            in_channels: 1,
+            out_channels: 2,
+            base_channel_num: 64,
+            padding_mode: "reflect",
+            dropout_rate: 0.5,
+        },
+    },
+    data: {
+        train_test_split: 0.8,
+        batch_size: 1,
+        max_batches_per_train_epoch: 300,
+        max_batches_per_test: 50,
+        color_to_label: {
+            "0": "DEPOLYMERIZED",
+            "255": "POLYMERIZED",
+        },
+    },
+    optimizer: {
+        name: "Adam",
+        params: {
+            lr: 1e-06,
+            betas: [
+                0.9,
+                0.999,
+            ],
+            eps: 1e-08,
+            weight_decay: 0.001,
+        },
+    },
+    criterions: [
+        {
+            name: "FocalLoss",
+            weight: 0.6,
+            params: {
+                gamma: 2.0,
+            },
+        },
+        {
+            name: "TverskyLoss",
+            weight: 0.4,
+            params: {
+                alpha: 0.4,
+                beta: 0.6,
+            },
+        },
+    ],
+    augmentation: {
+        transforms: [
+            {
+                name: "HorizontalFlip",
+                params: {
+                    p: 0.5,
+                },
+            },
+            {
+                name: "Rotate",
+                params: {
+                    limit: 180,
+                    border_mode: 2,
+                    value: 0,
+                },
+            },
+            {
+                name: "RandomScale",
+                params: {
+                    scale_limit: 0.5,
+                    interpolation: 1,
+                },
+            },
+            {
+                name: "RandomBrightnessContrast",
+                params: {
+                    brightness_limit: 0.2,
+                    contrast_limit: 0.2,
+                    p: 0.5,
+                },
+            },
+            {
+                name: "GaussNoise",
+                params: {
+                    var_limit: [
+                        10.0,
+                        100.0,
+                    ],
+                    mean: 0,
+                    per_channel: true,
+                    noise_scale_factor: 1,
+                    p: 0.5,
+                },
+            },
+            {
+                name: "GaussianBlur",
+                params: {
+                    blur_limit: [
+                        3,
+                        7,
+                    ],
+                    sigma_limit: [
+                        0.1,
+                        2.0,
+                    ],
+                    p: 0.5,
+                },
+            },
+        ],
+    },
+    scheduler: {
+        name: "StepLR",
+        params: {
+            step_size: 1000000,
+            gamma: 0.1,
+        },
+    },
+}
