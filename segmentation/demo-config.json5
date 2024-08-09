@@ -1,6 +1,8 @@
 {
     "demo_save_dir": "/Users/karan/microsegmentation/segmentation/demos/",
-    "model_dir": "/Users/karan/microsegmentation/ModelSaveFiles/",
+
+    //"model_dir": "/Users/karan/microsegmentation/ModelSaveFiles/",
+    "model_dir": "/Users/karan/Documents/ModelSaveFiles_D5",
 
     "shuffle_data": false,
     "max_num_demos": null,
@@ -10,7 +12,7 @@
     "save_file_dpi": 800,
 
     "demo_file_paths": [
-        {
+        /*{
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/depoly_000.png",
             "label": "/Users/karan/microsegmentation/Standard_Demo/Labels/depoly_000.png",
         },
@@ -29,7 +31,7 @@
         {
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/depoly_100.png",
             "label": "/Users/karan/microsegmentation/Standard_Demo/Labels/depoly_100.png",
-        },
+        },*/
         {
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/exp_control.png",
             "label": null,

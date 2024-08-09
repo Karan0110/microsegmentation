@@ -8,7 +8,7 @@
             out_channels: 2,
             base_channel_num: 64,
             padding_mode: "reflect",
-            dropout_rate: 0.5,
+            dropout_rate: 0.2,
         },
     },
     data: {
@@ -46,7 +46,7 @@
             weight: 0.4,
             params: {
                 alpha: 0.4,
-                beta: 0.6,
+                beta: 0.5,
             },
         },
     ],

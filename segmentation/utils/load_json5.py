@@ -26,7 +26,7 @@ def _update_nested_dict_from_path(root, sub_path, value) -> None:
 
     current[last_part] = value
 
-def load_json5(path: Path) -> Union[dict, list]:
+def load_json5(path: Path) -> Any:
     data = {}
     
     if path.is_file() and path.suffix == '.json5':

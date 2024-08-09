@@ -10,7 +10,7 @@ from .patches import get_image_patches, stitch_image_patches
 from utils.synthetic_dataset import Labels
 
 def get_hard_segmentation(segmentation : np.ndarray,
-                          segmentation_threshold : float = 0.5) -> np.ndarray:
+                          segmentation_threshold : float) -> np.ndarray:
 
     hard_segmentation = np.where(segmentation < segmentation_threshold, 0., 1.)
 

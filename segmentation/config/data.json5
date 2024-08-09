@@ -3,8 +3,8 @@
 
     "batch_size": 1,  //TESTING
 
-    "max_batches_per_train_epoch": 300, //TESTING
-    "max_batches_per_test": 50, //TESTING
+    "max_batches_per_train_epoch": 2, //TESTING (300)
+    "max_batches_per_test": 2, //TESTING (50)
 
     "color_to_label": {
         "0": "DEPOLYMERIZED",

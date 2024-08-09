@@ -29,7 +29,7 @@ def get_model(model_config : dict,
     model = model.to(device)
 
     if verbose:
-        print(f"\nCreated {model_name} model.")
+        print(f"\nCreated model.")
         total_params = sum(p.numel() for p in model.parameters())
         print(f"It has {total_params} parameters.")
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     model_name = args.name
 
-    model_dir = args.modeldir
+    model_dir = args.modeldir / model_name
     config_path = args.config
     log_dir = args.logdir / model_name
     dataset_dir = args.datadir 
@@ -151,8 +151,7 @@ if __name__ == '__main__':
     # ----------------------------------
 
     state_save_file_path, \
-    config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
-                                                      model_name=model_name)
+    config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
     # Load the config files
     # ---------------------
@@ -222,7 +221,7 @@ if __name__ == '__main__':
     start_epoch : int
     if state_save_file_path.exists():
         if verbose:
-            print(f"\nModel {model_name} savefile found.")
+            print(f"\nModel savefile found: {state_save_file_path}")
         if not overwrite_mode:
             if verbose:
                 print(f"Continuing training of this model from its config file...")
@@ -317,7 +316,6 @@ if __name__ == '__main__':
                                 optimizer=optimizer,
                                 scheduler=scheduler, 
                                 model_dir=model_dir,
-                                model_name=model_name,
                                 epoch=epoch,
                                 verbose=verbose)
                 print("\nSaved to file.")

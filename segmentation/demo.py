@@ -205,8 +205,7 @@ def plot_demos(demo_config : dict,
     if demo_name is None:
         demo_name = model_name
 
-    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
-                                                                            model_name=model_name)
+    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
     demo_save_dir = Path(demo_config['demo_save_dir']) / demo_name
     os.makedirs(demo_save_dir, exist_ok=True)
@@ -288,11 +287,13 @@ if __name__ == '__main__':
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
                                                                             model_name=model_name)
 
-    model, config = load_model_from_file(model_file_path=state_save_file_path,
-                                     config_file_path=config_save_file_path)
-                        
-    patch_size = config['model']['patch_size']
     device = get_device(verbose=verbose)
+
+    model, config = load_model_from_file(model_file_path=state_save_file_path,
+                                         device=device,
+                                         config_file_path=config_save_file_path)
+
+    patch_size = config['model']['patch_size']
         
     plot_demos(demo_config=demo_config,
                model_name=model_name,
