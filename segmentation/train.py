@@ -325,7 +325,7 @@ if __name__ == '__main__':
                 plot_demos(demo_config=demo_config,
                            demo_name=f"{model_name}_epoch_{epoch}",
                            model_name=model_name,
-                           hard_segmentation_threshold=0.5,
+                           hard_segmentation_threshold_quantile=0.0,
                            model=model,
                            model_dir=model_dir,
                            model_config=config['model'],

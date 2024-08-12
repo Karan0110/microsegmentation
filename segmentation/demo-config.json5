@@ -2,12 +2,12 @@
     "demo_save_dir": "/Users/karan/microsegmentation/segmentation/demos/",
 
     //"model_dir": "/Users/karan/microsegmentation/ModelSaveFiles/",
-    "model_dir": "/Users/karan/Documents/ModelSaveFiles_D5",
+    "model_dir": "/Users/karan/microsegmentation/ModelSaveFiles",
 
     "shuffle_data": false,
     "max_num_demos": null,
 
-    "hard_segmentation_threshold": 0.31,
+    "hard_segmentation_threshold_quantile": 0.998,
 
     "save_file_dpi": 800,
 
@@ -32,12 +32,16 @@
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/depoly_100.png",
             "label": "/Users/karan/microsegmentation/Standard_Demo/Labels/depoly_100.png",
         },*/
-        {
+        /*{
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/exp_control.png",
             "label": null,
         },
         {
             "image": "/Users/karan/microsegmentation/Standard_Demo/Images/exp_depoly.png",
+            "label": null,
+        },*/
+        {
+            "image": "/Users/karan/MTData/Experimental/trichome_1.png",
             "label": null,
         },
     ],

@@ -12,6 +12,9 @@ import torch
 
 from torch.utils.data import DataLoader, Dataset, random_split
 
+# Prevent auto-updating of albumentation (so program can run properly without internet)
+os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
+
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 

@@ -282,7 +282,8 @@ if __name__ == '__main__':
     if args.depoly is None:
         depoly_proportion_distribution_info = config['depoly_proportion_distribution']
         depoly_proportion_distribution  = getattr(np.random, depoly_proportion_distribution_info['name'])
-        depoly_proportion = depoly_proportion_distribution(**depoly_proportion_distribution_info['params'])
+        params = depoly_proportion_distribution_info.get('params', {})
+        depoly_proportion = depoly_proportion_distribution(**params)
     else:
         depoly_proportion = args.depoly
 

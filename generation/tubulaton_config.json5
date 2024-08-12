@@ -16,7 +16,7 @@
         //Any natural number
         "D_bundle": "49",
         "nb_microtubules_init": "30",
-        "nb_microtubulesnit_2": "30",
+        "nb_microtubules_init_2": "30",
 
         //Any probability
         "proba_crossmicro_cut": "0.005",
@@ -24,7 +24,7 @@
         "proba_detachement_par_step_par_microtubule": "0.001",
         "proba_initialisation_area": "0.002",
         "proba_initialisation_area_2": "0.002",
-        "proba_shrink": "0.0001",
+        "proba_shrink": "0.0005", //0.0001
 
         "nom_folder_input_vtk": "",
         "nom_folder_output_vtk": "",
@@ -60,7 +60,7 @@
         "tan_Angle_mb": "0.839099631177",
     },
 
-    "positive_real_params": ["Angle_bundle", "Angle_cut", "Angle_mb_limite", "Angle_mb_trajectoire"],
-    "natural_number_params": ["D_bundle", "nb_microtubules_init", "nb_microtubules_init_2"],
-    "prob_params": ["proba_crossmicro_cut", "proba_crossmicro_shrink", "proba_detachement_par_step_par_microtubule", "proba_initialisation_area", "proba_initialisation_area_2", "proba_shrink"],
+    "positive_real_params": [],//["Angle_bundle", "Angle_cut", "Angle_mb_limite", "Angle_mb_trajectoire"],
+    "natural_number_params": [],//["D_bundle", "nb_microtubules_init", "nb_microtubules_init_2"],
+    "prob_params": [],//["proba_crossmicro_cut", "proba_crossmicro_shrink", "proba_detachement_par_step_par_microtubule", "proba_initialisation_area", "proba_initialisation_area_2", "proba_shrink"],
 }

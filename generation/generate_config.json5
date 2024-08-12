@@ -2,7 +2,7 @@
     "tubulaton_unit_in_meters": 8e-9,
 
     "fluorophore_batch_size": 50000,
-    "fluorophore_batch_spread": 4,
+    "fluorophore_batch_spread": 2, //4
 
     "mt_label_point_radius": 10, //TODO testing
 
@@ -11,7 +11,7 @@
         "medium_refraction_index": 1.518,
 
         //TODO - check with Ray
-        "z_slice_range": 1.5e-6, //Totally made up
+        "z_slice_range": 2.0e-6, //Totally made up 1.5e-6
         "quantum_efficiency": 0.55,
         "gain": 1.0e4,
         "dark_count_rate": 50,
@@ -51,14 +51,10 @@
     },
 
     "microtubules": {
-        "depoly_displacement_std": 70.0,
+        "depoly_displacement_std": 100.0, //70.0
     },
 
     "depoly_proportion_distribution": {
-        "name": 'beta',
-        "params": {
-            'a': 5,
-            'b': 5,
-        }
+        "name": 'random', //uniform
     }
 }

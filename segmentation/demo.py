@@ -32,7 +32,7 @@ def get_demo_information(model : nn.Module,
                          label_file_path : Union[Path, None],
                          patch_size : int,
                          verbose : bool,
-                         hard_segmentation_threshold : float,
+                         hard_segmentation_threshold_quantile : float,
                          model_file_path : Union[Path, None] = None) -> Tuple[np.ndarray, Union[np.ndarray, None], np.ndarray, np.ndarray]:
     image = load_grayscale_image(image_file_path=image_file_path)
     if label_file_path is not None:
@@ -45,8 +45,9 @@ def get_demo_information(model : nn.Module,
                                     device=device,
                                     patch_size=patch_size).to('cpu').numpy()
 
+    hard_segmentation_threshold = np.quantile(segmentation.flatten(), hard_segmentation_threshold_quantile)
     hard_segmentation = get_hard_segmentation(segmentation=segmentation,
-                                              segmentation_threshold=hard_segmentation_threshold) #type: ignore
+                                              segmentation_threshold=hard_segmentation_threshold) 
 
     return (image, label, segmentation, hard_segmentation)
 
@@ -91,7 +92,7 @@ def plot_demo(demo_config : dict,
               model_file_path : Path,
               image_file_path : Path,
               label_file_path : Union[Path, None],
-              hard_segmentation_threshold : float,
+              hard_segmentation_threshold_quantile : float,
               save_to_file : bool,
               verbose : bool = True,
               only_show_histogram : bool = False,
@@ -106,7 +107,7 @@ def plot_demo(demo_config : dict,
                                                                          image_file_path=image_file_path,
                                                                          label_file_path=label_file_path,
                                                                          patch_size=patch_size,
-                                                                         hard_segmentation_threshold=hard_segmentation_threshold,
+                                                                         hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                                                                          verbose=False,
                                                                          model_file_path=model_file_path)
                                                                         
@@ -192,7 +193,7 @@ def plot_demo(demo_config : dict,
         plt.show()
 
 def plot_demos(demo_config : dict,
-               hard_segmentation_threshold : float,
+               hard_segmentation_threshold_quantile: float,
                model_dir : Path,
                model : nn.Module,
                model_name : str,
@@ -221,7 +222,7 @@ def plot_demos(demo_config : dict,
                 patch_size=patch_size,
                 model_file_path=state_save_file_path,
                 image_file_path=image_file_path,
-                hard_segmentation_threshold=hard_segmentation_threshold,
+                hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                 label_file_path=label_file_path,
                 save_file_dir=demo_save_dir,
                 only_show_histogram=only_show_histogram,
@@ -248,7 +249,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', '--threshold',
                         type=float,
-                        help="Threshold for hard segmentation (Else use default value in config file)")
+                        help="Threshold quantile for hard segmentation (Else use default value in config file)")
 
     parser.add_argument('-v', '--verbose', 
                         action='store_true', 
@@ -276,28 +277,26 @@ if __name__ == '__main__':
         raise ValueError(f"Invalid demo config! Must be a dict")
 
     # hard segmentation threshold
-    hard_segmentation_threshold = args.threshold
-    if hard_segmentation_threshold is None:
-        hard_segmentation_threshold = float(demo_config['hard_segmentation_threshold'])
+    hard_segmentation_threshold_quantile = args.threshold
+    if hard_segmentation_threshold_quantile is None:
+        hard_segmentation_threshold_quantile = float(demo_config['hard_segmentation_threshold_quantile'])
 
     # Load model
     model_name = args.name
-    model_dir = Path(demo_config['model_dir'])
+    model_dir = Path(demo_config['model_dir']) / model_name
 
-    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir,
-                                                                            model_name=model_name)
+    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
     device = get_device(verbose=verbose)
 
-    model, config = load_model_from_file(model_file_path=state_save_file_path,
-                                         device=device,
-                                         config_file_path=config_save_file_path)
+    model, config = load_model_from_file(model_dir=model_dir,
+                                         device=device)
 
     patch_size = config['model']['patch_size']
         
     plot_demos(demo_config=demo_config,
                model_name=model_name,
-               hard_segmentation_threshold=hard_segmentation_threshold,
+               hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                model=model,
                model_dir=model_dir,
                model_config=config['model'],
