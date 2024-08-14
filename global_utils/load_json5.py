@@ -2,8 +2,6 @@ from pathlib import Path
 from typing import Any, Union
 import json5
 
-import torch
-
 def _load_json5_file(file_path : Path) -> Union[list,dict]:
     with open(file_path, 'r', encoding='utf-8') as f:
         contents = json5.load(f)

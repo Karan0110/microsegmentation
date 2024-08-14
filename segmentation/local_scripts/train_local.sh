@@ -13,16 +13,16 @@ else
   epochs="$2"
 fi
 
-base_dir="/Users/karan/microsegmentation"
-segmentation_dir="$base_dir/segmentation"
+# Load .env file
+export $(grep -v '^#' .env | xargs)
 
-program_path="$segmentation_dir/train.py"
+program_path="$BASE_DIR/segmentation/train.py"
 
-data_dir="/Users/karan/MTData/Synthetic/"
-log_dir="$segmentation_dir/runs/"
-model_dir="$base_dir/ModelSaveFiles/"
+data_dir="$BASE_DIR/Synthetic/"
+log_dir="$BASE_DIR/runs/"
+model_dir="$BASE_DIR/ModelSaveFiles/"
 config_path="$segmentation_dir/config/"
-demo_config_path="$segmentation_dir/demo-config.json5"
+demo_config_path="$segmentation_dir/demo_config.json5"
 
 source $segmentation_dir/.venv_segmentation/bin/activate
 python $program_path -c $config_path --name $1 --democonfig $demo_config_path --epochs $epochs -dd $data_dir -ld $log_dir -md $model_dir --verbose $overwrite_mode

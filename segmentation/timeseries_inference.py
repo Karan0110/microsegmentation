@@ -5,14 +5,13 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-import cv2
-
-from PIL import Image
 import tifffile
 
-from models.inference import get_segmentation, get_hard_segmentation
-from utils import load_json5, get_device
-from models.serialization import load_model_from_file
+from .models.inference import get_segmentation, get_hard_segmentation
+from .models.serialization import load_model_from_file
+from .utils import get_device
+
+from global_utils import load_json5
 
 def get_otsu_threshold(image: np.ndarray, 
                        num_bins: int = 30) -> float:

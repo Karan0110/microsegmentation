@@ -7,6 +7,7 @@ from typing import Iterable, Tuple, Any, Union
 import itertools
 import shutil
 import copy
+from dotenv import load_dotenv
 
 import torch
 import torch.nn as nn
@@ -15,10 +16,11 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from epoch import train_model, test_model
-from utils.synthetic_dataset import get_data_loaders, Labels
+from data.synthetic_dataset import get_data_loaders, Labels
 from criterions.utils import get_criterions
 from demo import plot_demos
-from utils import instantiate_from_dict, load_json5, get_device
+from global_utils import instantiate_from_dict, load_json5
+from utils import get_device
 from models.serialization import get_model_save_file_paths, save_model_to_file
 import models
 
@@ -70,6 +72,11 @@ def get_command_line_args() -> argparse.Namespace:
     )
 
     # Positional argument (mandatory)
+    parser.add_argument('-n', '--name',
+                        type=str,
+                        required=True,
+                        help="Model name (continues training any pre-existing model)")
+
     parser.add_argument('-c', '--config', 
                         type=Path, 
                         help='Config Directory (If not in overwrite mode, program uses a pre-existing config if it exists)')
@@ -79,24 +86,16 @@ def get_command_line_args() -> argparse.Namespace:
                         default=None,
                         help='Path to demo config (If left blank no demos are plotted)')
 
-    parser.add_argument('-n', '--name',
-                        type=str,
-                        required=True,
-                        help="Model name (continues training any pre-existing model)")
-
     parser.add_argument('-dd', '--datadir',
                         type=Path,
-                        required=True,
                         help="Training data directory")
 
     parser.add_argument('-ld', '--logdir',
                         type=Path,
-                        default="runs/",
-                        help="Log directory for TensorBoard (Default runs/)")
+                        help="Log directory for TensorBoard")
 
     parser.add_argument('-md', '--modeldir',
                         type=Path,
-                        required=True,
                         help="Model directory")
     
     parser.add_argument('-sm', '--savemode',
@@ -126,6 +125,7 @@ if __name__ == '__main__':
     # Handle CL arguments
     # --------------------
 
+    load_dotenv()
     args = get_command_line_args()
 
     verbose = args.verbose
@@ -134,11 +134,32 @@ if __name__ == '__main__':
 
     model_name = args.name
 
-    model_dir = args.modeldir / model_name
-    config_path = args.config
-    log_dir = args.logdir / model_name
-    dataset_dir = args.datadir 
-    demo_config_path = args.democonfig
+    if args.modeldir is not None:
+        model_dir = args.modeldir 
+    else:
+        model_dir = Path(os.environ['MODELS_PATH'])
+    model_dir = model_dir / model_name
+
+    if args.config is not None:
+        config_path = args.config
+    else:
+        config_path = Path(os.environ['CONFIG_PATH'])
+
+    if args.logdir is not None:
+        log_dir = args.logdir
+    else:
+        log_dir = Path(os.environ['LOG_PATH'])
+    log_dir = log_dir / model_name
+
+    if args.datadir is not None:
+        dataset_dir = args.datadir 
+    else:
+        dataset_dir = Path(os.environ["DATA_PATH"])
+
+    if args.democonfig is not None:
+        demo_config_path = args.democonfig
+    else:
+        demo_config_path = Path(os.environ['DEMO_CONFIG_PATH'])
 
     num_epochs = args.epochs
 
@@ -238,7 +259,7 @@ if __name__ == '__main__':
                 if not isinstance(loaded_config, dict):
                     raise ValueError(f"Model config path ({config_save_file_path}) is invalid - it should be a dict!")
                 config = loaded_config
-                start_epoch = config['epoch'] + 1 #type: ignore
+                start_epoch = config['epoch'] + 1
         else:
             # Delete tensorboard logs
             if verbose:

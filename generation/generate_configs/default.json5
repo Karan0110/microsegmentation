@@ -17,7 +17,7 @@
         "dark_count_rate": 50,
         "digital_gain": 1.0,
 
-        "psf_kernel_size": 35,
+        "psf_kernel_size": 25,
 
         //TODO - what does this mean physically?
         "peak_intensity": 5.0,
@@ -51,7 +51,7 @@
     },
 
     "microtubules": {
-        "depoly_displacement_std": 100.0, //70.0
+        "depoly_displacement_std": 60.0, //70.0
     },
 
     "depoly_proportion_distribution": {

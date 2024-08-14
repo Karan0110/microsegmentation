@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 
-from utils import instantiate_from_dict, load_json5
+from global_utils import instantiate_from_dict, load_json5
 import models
 
 def get_model_save_file_paths(model_dir : Path) -> Tuple[Path, Path]:

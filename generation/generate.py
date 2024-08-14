@@ -9,9 +9,10 @@ import json5
 import time
 import random
 from pathlib import Path
-from typing import Iterable, Tuple, Union, List
+from typing import Iterable, Tuple, Union, List, Optional
 import argparse
 import re
+from dotenv import load_dotenv
 
 import numpy as np
 import scipy
@@ -26,6 +27,7 @@ from depoly_simulation import simulate_depoly
 from labelling import get_label
 
 from visualize import visualize
+from global_utils.load_json5 import load_json5
 
 def generate(tubulaton_output_file_path : Path,
              config : dict,
@@ -206,10 +208,22 @@ def extract_file_id(file_path : Path) -> int:
     else:
         raise ValueError(f"The file name {file_path} does not match the 'tubulaton-[number].vtk' format.")
 
-if __name__ == '__main__':
-    start_time = time.time()
-    random.seed(1000)
+def parse_number_or_range(value : str) -> range:
+    try:
+        if '-' in value:
+            # This is a range like 32-329
+            start, end = map(int, value.split('-'))
+            if start > end:
+                raise ValueError(f"Invalid range: '{value}' (start should be less than or equal to end)")
+            return range(start, end + 1)
+        else:
+            # This is a single number like 23
+            num = int(value)
+            return range(num, num + 1)
+    except ValueError:
+        raise ValueError(f"Invalid input format: '{value}' (must be a number or a range in format START-END)")
 
+def parse_args() -> argparse.Namespace:
     # Parse CL arguments
     parser = argparse.ArgumentParser(
         description="Generate synthetic training data from tubulaton .vtk files."
@@ -217,29 +231,19 @@ if __name__ == '__main__':
 
     parser.add_argument('-od', '--output_dir', 
                         type=Path, 
-                        help='Output Directory Path')
-
-    parser.add_argument('-on', '--output_name',
-                        type=str,
-                        help="Name of output file (Can only be specified if there is a single input file)")
+                        help='Output Directory Path\nLeave blank to use value in .env file')
 
     parser.add_argument('-i', '--input',
                         type=Path,
-                        help="Input Path (tubulaton .vtk file or directory of .vtk files)")
+                        help="Input Path (tubulaton .vtk file or directory of .vtk files)\nLeave blank to use value in .env file")
 
-    parser.add_argument('-id', '--id',
+    parser.add_argument('-ids', '--ids',
                         type=str,
-                        help="Specify a single file ID to run program on (Must supply a directory for --input)")
+                        help="Which file ids to use? (Either a number (e.g. 32) or a range (e.g. 32-48)")
 
     parser.add_argument('-c', '--config',
                         type=Path,
-                        required=True,
-                        help='Path to JSON5 config file')
-
-    parser.add_argument('--num_files',
-                        type=int,
-                        help="""Number of .vtk files to generate synthetic data from (Only valid for directory input, not file input). 
-                                Files are randomly chosen. If omitted, all files in input directory are used.""")
+                        help='Path to JSON5 config file\nLeave blank to use value in .env file')
     
     parser.add_argument("--depoly",
                         type=float,
@@ -259,23 +263,37 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    return args
+
+if __name__ == '__main__':
+    start_time = time.time()
+    random.seed(1000)
+
+    args = parse_args()
+    load_dotenv()
+
     mode = args.mode
     verbose = args.verbose
 
-    max_num_files = args.num_files
-    output_dir = args.output_dir
-    output_name = args.output_name
+    if args.output_dir is not None:
+        output_dir = args.output_dir
+    else:
+        output_dir = Path(os.environ["GENERATE_OUTPUT_DIR"])
 
-    tubulaton_output_path = Path(args.input)
-    config_file_path = Path(args.config)
+    if args.input is not None:
+        tubulaton_output_path = args.input
+    else:
+        tubulaton_output_path = Path(os.environ["TUBULATON_OUTPUT_DIR"])
 
-    file_id : Union[int, None]
-    file_id = args.id
+    if args.config is not None:
+        config_file_path = args.config
+    else:
+        config_file_path = Path(os.environ["GENERATE_CONFIG"])
 
-    with open(config_file_path, 'r') as file:
-        config = json5.load(file)
-    if not isinstance(config, dict):
-        raise TypeError("JSON5 config file is of invalid format! It should be a dictionary")
+    file_ids : Optional[range]
+    file_ids = parse_number_or_range(args.ids) if (args.ids is not None) else args.ids
+
+    config = load_json5(config_file_path)
     if verbose:
         print(f"Loaded config file: {config_file_path}")
 
@@ -295,16 +313,18 @@ if __name__ == '__main__':
 
     # Get the tubulaton output file paths
     tubulaton_output_file_paths : list
-    if file_id is not None:
+    if file_ids is not None:
         if tubulaton_output_path.is_file():
-            raise ValueError(f"Provided file ID {file_id}, but didn't give a directory for tubulaton_output_path!")
+            raise ValueError(f"Provided file ID range {file_ids}, but didn't give a directory for tubulaton_output_path!")
 
-        target_tubulaton_output_file_path = tubulaton_output_path / f"tubulaton-{file_id}.vtk" 
-        if not target_tubulaton_output_file_path.exists():
-            raise ValueError(f"Provided file ID {file_id} does not correspond to a file:" 
-                             + f"\n{target_tubulaton_output_file_path} is not a file!")
-        
-        tubulaton_output_file_paths = [target_tubulaton_output_file_path]
+        tubulaton_output_file_paths = []
+
+        for file_id in file_ids:
+            target_tubulaton_output_file_path = tubulaton_output_path / f"tubulaton-{file_id}.vtk" 
+            if not target_tubulaton_output_file_path.exists():
+                raise FileNotFoundError(f"Provided file ID {file_id} does not correspond to a file:" 
+                                      + f"\n{target_tubulaton_output_file_path} is not a file!")
+            tubulaton_output_file_paths.append(target_tubulaton_output_file_path)
     else:
         if tubulaton_output_path.is_dir():
             tubulaton_output_file_paths = [file_path for file_path in tubulaton_output_path.iterdir() if file_path.suffix == '.vtk'] 
@@ -327,15 +347,7 @@ if __name__ == '__main__':
         print(f"Demo file choice: {file_path}")
         file_path_iterator = [file_path]
     else:
-        if max_num_files is None:
-            file_path_iterator = tubulaton_output_file_paths
-        else:
-            random.shuffle(tubulaton_output_file_paths)
-            tubulaton_output_file_paths = tubulaton_output_file_paths[:max_num_files]
-            file_path_iterator = tubulaton_output_file_paths
-
-    if len(file_path_iterator) > 1 and output_name is not None:
-        raise ValueError(f"An output name was specified, but the program is set up to run on multiple .vtk files!")
+        file_path_iterator = tubulaton_output_file_paths
 
     for tubulaton_output_file_path in file_path_iterator:
         block_start_time = time.time()
@@ -346,12 +358,8 @@ if __name__ == '__main__':
             if output_dir is None:
                 raise ValueError("Output dir cannot be None when not in demo mode!")
 
-            if output_name is None:
-                image_file_name = f"image-{file_id}.png"
-                label_file_name = f"label-{file_id}.png"
-            else:
-                image_file_name = f"{output_name}.png" 
-                label_file_name = f"{output_name}.png" 
+            image_file_name = f"image-{file_id}.png"
+            label_file_name = f"label-{file_id}.png"
 
             image_file_path = output_dir / 'Images' / image_file_name
             label_file_path = output_dir / 'Labels' / label_file_name

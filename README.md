@@ -15,6 +15,7 @@ before running `cmake ..`
 
 * The virtualenvs need to be installed as .venv_generation and .venv_segmentation in the right folders if you want to use HPC scripts out of the box
 	* And you need to load the latest version of python (find with module avail python) before making the venv: `module load python/3.11.0-icl` 
+	* You need to set the various environmental variables (PYTHONPATH, etc)
 
 * Look for "TODO TESTING" in config files/scripts when switching between test and production mode
 	

@@ -2,7 +2,7 @@
     "name": "StepLR",
 
     "params": {
-        //A hacky way to disable it (set it to bign number)
+        //A hacky way to disable it (set it to big number)
         "step_size": 1000000, 
         "gamma": 0.1,
     },

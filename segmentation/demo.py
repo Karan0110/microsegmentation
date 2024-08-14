@@ -2,22 +2,22 @@ from pathlib import Path
 import os
 import random
 from typing import Tuple, Union, List, Optional
-import json5
+from dotenv import load_dotenv
 import argparse
-import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-import cv2
 from PIL import Image
 
 import torch
 import torch.nn as nn
 
-from models.inference import get_segmentation, get_hard_segmentation
-from utils import load_json5, get_device
-from models.serialization import load_model_from_file, get_model_save_file_paths
+from segmentation.utils import get_device
+from global_utils import load_json5
+
+from segmentation.models.inference import get_segmentation, get_hard_segmentation
+from segmentation.models.serialization import load_model_from_file, get_model_save_file_paths
 
 def load_grayscale_image(image_file_path : Path) -> np.ndarray:
     image = np.array(Image.open(image_file_path).convert('L'))
@@ -127,15 +127,15 @@ def plot_demo(demo_config : dict,
         axs_index += 1 #type: ignore
 
         colored_segmentation = get_colored_image(segmentation)
-        axs[axs_index].imshow(colored_segmentation) #type: ignore
+        axs[axs_index].imshow(segmentation, cmap='viridis') #type: ignore
         axs[axs_index].axis('off') #type: ignore
         axs[axs_index].set_title("Soft Segmentation") #type: ignore
         axs_index += 1 #type: ignore
 
-        axs[axs_index].imshow(hard_segmentation, cmap='gray') #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title(f"Hard Segmentation\n(Threshold {hard_segmentation_threshold})") #type: ignore
-        axs_index += 1 #type: ignore
+        axs[axs_index].imshow(hard_segmentation, cmap='gray') 
+        axs[axs_index].axis('off') 
+        axs[axs_index].set_title(f"Hard Segmentation\n(Quantile {hard_segmentation_threshold_quantile})")
+        axs_index += 1 
 
         colored_hard_segmentation = get_colored_image(hard_segmentation)
         axs[axs_index].imshow(colored_hard_segmentation) #type: ignore
@@ -208,7 +208,7 @@ def plot_demos(demo_config : dict,
 
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
-    demo_save_dir = Path(demo_config['demo_save_dir']) / demo_name
+    demo_save_dir = Path(os.environ['DEMO_SAVE_PATH']) / demo_name
     os.makedirs(demo_save_dir, exist_ok=True)
 
     patch_size = model_config['patch_size']
@@ -229,8 +229,7 @@ def plot_demos(demo_config : dict,
                 verbose=verbose,
                 save_to_file=save_to_file)
 
-
-if __name__ == '__main__':
+def parse_args() -> argparse.Namespace:
     # Parse CL arguments
     parser = argparse.ArgumentParser(
         description="Demonstrate trained U-Net model."
@@ -241,6 +240,10 @@ if __name__ == '__main__':
                         type=Path, 
                         required=True,
                         help='Config File Path')
+    
+    parser.add_argument('-md', '--modeldir', 
+                        type=Path, 
+                        help='Model Path')
 
     parser.add_argument('-n', '--name',
                         type=str,
@@ -266,8 +269,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    verbose = args.verbose
+    return args
 
+
+if __name__ == '__main__':
+    args = parse_args()
+    load_dotenv()
+
+    verbose = args.verbose
     show_mode = args.show
 
     #  Load the demo config file
@@ -283,7 +292,12 @@ if __name__ == '__main__':
 
     # Load model
     model_name = args.name
-    model_dir = Path(demo_config['model_dir']) / model_name
+
+    if args.modeldir is not None:
+        model_dir = args.modeldir
+    else:
+        model_dir = Path(os.environ["MODELS_PATH"]) 
+    model_dir = model_dir / model_name
 
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 

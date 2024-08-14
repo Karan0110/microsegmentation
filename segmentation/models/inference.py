@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from .patches import get_image_patches, stitch_image_patches
 
-from utils.synthetic_dataset import Labels
+from segmentation.data.synthetic_dataset import Labels
 
 def get_hard_segmentation(segmentation : np.ndarray,
                           segmentation_threshold : float) -> np.ndarray:

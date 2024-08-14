@@ -13,4 +13,3 @@
 ## Tubulaton
 
 * Change parameter names in config.ini
-* The MTs shouldn't permeat the vacuole or the root tip
