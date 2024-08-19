@@ -1,11 +1,23 @@
-__pycache__/
-.vscode/
-.ipynb_checkpoints/
+# Mac OS X 
 .DS_Store
-.segmentation_cache/
+
+# VS Code
+.vscode/
+
+# Python
+__pycache__/
+.ipynb_checkpoints/
+
+# HPC jobs
 machine.file.*
-*.out
-.venv_*/
+slurm-*.out
+job_templates/
+
+# Virtual environments
+.venv_segmentation/
+.venv_generation/
+
+# General
 
 JupyterNotebooks/
 legacy_resnet_code/
@@ -13,28 +25,27 @@ Sandbox.ipynb
 sandbox.py
 *_DEPRECATED.py
 
-param_sweep_config_files/
-param_sweep_config_files_test/
-param_sweep/
+.env
 
+# Program outputs
 Models/
-Notes/
-demos/
-Standard_Demo/
 runs/
-runs_*/
+segmentation_demos/
+generation_demos/
 
-job_templates/
-Papers/
-ResearchLeads.md
+# Personal
 Tasks.md
+ResearchLeads.md
 HyperparamSweep.md
 Experiments.md
 Poster.md
 
-Data_*/
-Data/
+Notes/
+Papers/
+
+# Data
+
+SyntheticData_*/
+SyntheticData/
 Experimental_Data/
-
-.env
-
+ProjectBackground.md

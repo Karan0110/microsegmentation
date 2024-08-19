@@ -1,27 +1,4 @@
 {
-    "shuffle_data": false,
-    "max_num_demos": null,
-
     "hard_segmentation_threshold_quantile": 0.989,
-
     "save_file_dpi": 800,
-
-    "demo_file_paths": [
-        /*{
-            "image": "/Users/karan/microsegmentation/Synthetic_SPARSE/Images/image-1.png",
-            "label": "/Users/karan/microsegmentation/Synthetic_SPARSE/Labels/label-1.png",
-        },
-        {
-            "image": "/Users/karan/microsegmentation/Synthetic_SPARSE/Images/image-2.png",
-            "label": "/Users/karan/microsegmentation/Synthetic_SPARSE/Labels/label-2.png",
-        },
-        {
-            "image": "/Users/karan/microsegmentation/Synthetic_SPARSE/Images/image-3.png",
-            "label": "/Users/karan/microsegmentation/Synthetic_SPARSE/Labels/label-3.png",
-        },*/
-        {
-            "image": "/Users/karan/microsegmentation/Experimental_Data/trichome_1.png",
-            "label": null,
-        },
-    ],
 }

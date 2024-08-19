@@ -5,10 +5,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from segmentation.data.labels import Labels
+
 import criterions
 
 def weight_dict_to_tensor(raw_weights : dict,
-                          Labels,
                           normalize : bool = False) -> torch.Tensor:
     weights = [None] * len(Labels)
     for label_str in raw_weights:
@@ -23,8 +24,7 @@ def weight_dict_to_tensor(raw_weights : dict,
     return weights
 
 def _get_criterion(criterion_config : dict,
-                  device : torch.device,
-                  Labels) -> nn.Module:
+                  device : torch.device) -> nn.Module:
     criterion_name = criterion_config['name']
 
     raw_criterion_params = criterion_config['params']
@@ -34,14 +34,12 @@ def _get_criterion(criterion_config : dict,
         if 'weight' in raw_criterion_params:
             raw_class_weights = raw_criterion_params['weight']
             new_criterion_params['weight'] = weight_dict_to_tensor(raw_class_weights,
-                                                                   Labels=Labels,
                                                                    normalize=True).to(device)
 
     if criterion_name == 'FocalLoss':
         if 'alpha' in raw_criterion_params:
             raw_weights = raw_criterion_params['alpha']
             new_criterion_params['alpha'] = weight_dict_to_tensor(raw_weights,
-                                                                  Labels=Labels,
                                                             normalize=True).to(device)
 
     if criterion_name == "TverskyLoss":
@@ -61,15 +59,13 @@ def _get_criterion(criterion_config : dict,
 
 def get_criterions(criterions_config : List[dict],
                    device : torch.device,
-                   Labels,
                    verbose : bool = False) -> List[dict]:
     criterions : List[dict] = []
 
     for criterion_config in criterions_config:
         weight = criterion_config.get('weight', 1.0)
         criterion = _get_criterion(criterion_config=criterion_config,
-                                   device=device,
-                                   Labels=Labels)
+                                   device=device)
         name = criterion_config['name']
 
         criterions.append({

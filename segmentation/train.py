@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse
 import json5
 import time
-from typing import Iterable, Tuple, Any, Union
+from typing import Iterable, Tuple, Any, Union, List
 import itertools
 import shutil
 import copy
@@ -18,52 +18,12 @@ from torch.utils.tensorboard import SummaryWriter
 from epoch import train_model, test_model
 from data.synthetic_dataset import get_data_loaders, Labels
 from criterions.utils import get_criterions
-from demo import plot_demos
-from global_utils import instantiate_from_dict, load_json5
+from global_utils import load_json5, save_json5
+from global_utils.arguments import get_argument, get_path_argument
 from utils import get_device
-from models.serialization import get_model_save_file_paths, save_model_to_file
-import models
 
-def get_model(model_config : dict,
-              device : torch.device,
-              verbose : bool) -> nn.Module:
-    model = instantiate_from_dict(models, information=model_config)
-    model = model.to(device)
-
-    if verbose:
-        print(f"\nCreated model.")
-        total_params = sum(p.numel() for p in model.parameters())
-        print(f"It has {total_params} parameters.")
-
-    return model
-
-def get_optimizer(model : nn.Module,
-                  optimizer_config : dict,
-                  verbose : bool) -> optim.Optimizer:
-    extra_optimizer_config = copy.deepcopy(optimizer_config)
-    extra_optimizer_config['params']['params'] = model.parameters()
-
-    optimizer = instantiate_from_dict(namespace=torch.optim, 
-                                      information=extra_optimizer_config)
-
-    if verbose:
-        print(f"\nInitialized optimizer.")
-
-    return optimizer
-
-def get_scheduler(optimizer : optim.Optimizer,
-                  scheduler_config : dict,
-                  verbose : bool) -> optim.lr_scheduler.LRScheduler:
-    extra_scheduler_config = copy.deepcopy(scheduler_config)
-    extra_scheduler_config['params']['optimizer'] = optimizer
-
-    scheduler = instantiate_from_dict(namespace=optim.lr_scheduler,
-                                      information=extra_scheduler_config)
-
-    if verbose:
-        print("\nInitialized scheduler.")
-    
-    return scheduler
+from utils.checkpoint import save_checkpoint, load_checkpoint
+from utils.serialization import save_model
 
 def get_command_line_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -72,19 +32,22 @@ def get_command_line_args() -> argparse.Namespace:
     )
 
     # Positional argument (mandatory)
+    parser.add_argument('-e', '--epochs',
+                        type=int,
+                        help="Number of epochs (Leave blank to continue until KeyboardInterrupt)")
+
+    parser.add_argument('-v', '--verbose', 
+                        action='store_true', 
+                        help='Increase output verbosity')
+
     parser.add_argument('-n', '--name',
                         type=str,
                         required=True,
-                        help="Model name (continues training any pre-existing model)")
+                        help="Model name (continues training any pre-existing model if checkpoint exists)")
 
     parser.add_argument('-c', '--config', 
                         type=Path, 
-                        help='Config Directory (If not in overwrite mode, program uses a pre-existing config if it exists)')
-
-    parser.add_argument('-dc', '--democonfig',
-                        type=Path,
-                        default=None,
-                        help='Path to demo config (If left blank no demos are plotted)')
+                        help='Config Directory (Ignores and uses a pre-existing config if it checkpoint exists)')
 
     parser.add_argument('-dd', '--datadir',
                         type=Path,
@@ -97,23 +60,6 @@ def get_command_line_args() -> argparse.Namespace:
     parser.add_argument('-md', '--modeldir',
                         type=Path,
                         help="Model directory")
-    
-    parser.add_argument('-sm', '--savemode',
-                        choices=['best', 'recent'],
-                        default='best',
-                        help="Which model is saved to file")
-    
-    parser.add_argument('-e', '--epochs',
-                        type=int,
-                        help="Number of epochs (Leave blank to continue until KeyboardInterrupt)")
-
-    parser.add_argument('-v', '--verbose', 
-                        action='store_true', 
-                        help='Increase output verbosity')
-
-    parser.add_argument('--overwrite', 
-                        action='store_true', 
-                        help='Overwrite saved model, if it exists')
 
     args = parser.parse_args()
 
@@ -129,86 +75,69 @@ if __name__ == '__main__':
     args = get_command_line_args()
 
     verbose = args.verbose
-    overwrite_mode = args.overwrite
-    save_mode = args.savemode
-
     model_name = args.name
+    num_epochs = args.epochs
 
-    if args.modeldir is not None:
-        model_dir = args.modeldir 
-    else:
-        model_dir = Path(os.environ['MODELS_PATH'])
+    model_dir = get_path_argument(cl_args=args,
+                                  cl_arg_name='modeldir',
+                                  env_var_name='MODELS_PATH')
     model_dir = model_dir / model_name
 
-    if args.config is not None:
-        config_path = args.config
-    else:
-        config_path = Path(os.environ['CONFIG_PATH'])
+    config_path = get_path_argument(cl_args=args,
+                                    cl_arg_name='config',
+                                    env_var_name='CONFIG_PATH')
 
-    if args.logdir is not None:
-        log_dir = args.logdir
-    else:
-        log_dir = Path(os.environ['LOG_PATH'])
+    log_dir = get_path_argument(cl_args=args,
+                                cl_arg_name='logdir',
+                                env_var_name='LOG_PATH')
     log_dir = log_dir / model_name
 
-    if args.datadir is not None:
-        dataset_dir = args.datadir 
-    else:
-        dataset_dir = Path(os.environ["DATA_PATH"])
-
-    if args.democonfig is not None:
-        demo_config_path = args.democonfig
-    else:
-        demo_config_path = Path(os.environ['DEMO_CONFIG_PATH'])
-
-    num_epochs = args.epochs
+    dataset_dir = get_path_argument(cl_args=args,
+                                    cl_arg_name='datadir',
+                                    env_var_name='DATA_PATH')
 
     # Set up device
     # --------------
 
     device = get_device(verbose=verbose)
 
-    # Location of model/config savefiles
-    # ----------------------------------
-
-    state_save_file_path, \
-    config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
-
-    # Load the config files
-    # ---------------------
-
-    config : Union[dict, list]
-    if config_save_file_path.exists() and (not overwrite_mode):
-        if verbose:
-            print(f"\nNot in overwrite mode and a checkpoint config file already exists at {config_save_file_path}.\nUsing checkpoint config dir...")
-        config = load_json5(config_save_file_path)
-    else:
-        print(f"\nConfig file path: {config_path.absolute()}")
-        config = load_json5(config_path)
-    if not isinstance(config, dict):
-        raise ValueError(f"Invalid config file! Must be a dict")
-
-    demo_config = None
-    if demo_config_path is not None:
-        demo_config = load_json5(demo_config_path)
-    if not isinstance(demo_config, dict) and demo_config is not None:
-        raise ValueError(f"Invalid demo config file! Must be a dict")
-
     # Set up TensorBoard writer
     # -------------------------
 
     if verbose:
-        print(f"TensorBoard log dir: {log_dir}")
+        print(f"\nTensorBoard log dir: {log_dir}")
     writer = SummaryWriter(log_dir)
+
+    # Initialize model, loss function, optimizer, and scheduler
+    # ---------------------------------------------------------
+
+    checkpoint = load_checkpoint(device=device,
+                                 config_path=config_path,
+                                 save_dir=model_dir,
+                                 verbose=verbose)
+    model : nn.Module
+    optimizer : torch.optim.Optimizer
+    criterions : List[dict]
+    scheduler : torch.optim.lr_scheduler.LRScheduler
+    config : dict
+
+    model = checkpoint['model']
+    optimizer = checkpoint['optimizer']
+    criterions = checkpoint['criterions']
+    scheduler = checkpoint['scheduler']
+    config = checkpoint['config']
+
 
     # Set up data loaders
     # -------------------
     
     if verbose:
-        print(f"Training Data: {dataset_dir}")
+        print(f"\nTraining Data: {dataset_dir}")
 
     data_config = config['data']
     patch_size = config['model']['patch_size']
+    if verbose:
+        print(f"\nPatch size: {patch_size}")
 
     train_loader, test_loader = get_data_loaders(patch_size=patch_size,
                                                  base_dir=dataset_dir,
@@ -216,74 +145,16 @@ if __name__ == '__main__':
                                                  **data_config,
                                                  verbose=verbose)
 
-    # Initialize model, loss function, optimizer, and scheduler
-    # ---------------------------------------------------------
+    # Training and testing loop
+    # -------------------------
 
-    model = get_model(model_config=config['model'],
-                      device=device,
-                      verbose=verbose)
-    
-    criterions = get_criterions(criterions_config=config['criterions'],
-                               device=device,
-                               Labels=Labels,
-                               verbose=verbose)
-
-    optimizer = get_optimizer(model=model,
-                              optimizer_config=config['optimizer'],
-                              verbose=verbose)
-
-    scheduler = get_scheduler(optimizer=optimizer,
-                              scheduler_config=config['scheduler'],
-                              verbose=verbose)
-
-    # Check if savefile exists
-    # ------------------------
-                            
-    start_epoch : int
-    if state_save_file_path.exists():
-        if verbose:
-            print(f"\nModel savefile found: {state_save_file_path}")
-        if not overwrite_mode:
-            if verbose:
-                print(f"Continuing training of this model from its config file...")
-            
-            checkpoint = torch.load(state_save_file_path, 
-                                    weights_only=True) #safety feature
-
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            scheduler.load_state_dict(checkpoint['scheduler'])
-
-            with open(config_save_file_path, 'r') as config_save_file:
-                loaded_config = json5.load(config_save_file)
-                if not isinstance(loaded_config, dict):
-                    raise ValueError(f"Model config path ({config_save_file_path}) is invalid - it should be a dict!")
-                config = loaded_config
-                start_epoch = config['epoch'] + 1
-        else:
-            # Delete tensorboard logs
-            if verbose:
-                print(f"Clearing old tensorboard logs...")
-            shutil.rmtree(writer.log_dir)
-            os.makedirs(writer.log_dir, exist_ok=True)
-
-            # Delete pre-existing model files
-            if verbose:
-                print(f"Clearing old savefiles...")
-            os.remove(state_save_file_path)
-            os.remove(config_save_file_path)
-
-            start_epoch = 1
-    else:
-        # Delete any old tensorboard logs
-        print(f"Clearing any old tensorboard logs...")
+    is_new = checkpoint['is_new']
+    if is_new:
+        print(f"\nClearing any old tensorboard logs...")
         shutil.rmtree(writer.log_dir)
         os.makedirs(writer.log_dir, exist_ok=True)
 
-        start_epoch = 1
-
-    # Training and testing loop
-    # -------------------------
+    start_epoch = config.get('epoch', 0) + 1
 
     best_test_loss = None
 
@@ -292,6 +163,7 @@ if __name__ == '__main__':
         epoch_iterator = range(start_epoch, start_epoch+num_epochs)
     else:
         epoch_iterator = itertools.count(start=start_epoch)
+
     for epoch in epoch_iterator:
         try:
             epoch_start_time = time.time()
@@ -319,43 +191,36 @@ if __name__ == '__main__':
             if verbose:
                 print(f"Test Loss: {test_loss}")
 
-            historical_best = False
-
+            # Check if it's the best model so far (and if so save to file)
             if best_test_loss is None or test_loss < best_test_loss:
                 if verbose:
                     print(f"This is a historical best test loss.")
-                    if save_mode == 'best':
-                        print(f"We are in 'best' savemode - so it will be saved to file.")
+
                 best_test_loss = test_loss
-                historical_best = True
-                    
+
+                if verbose:
+                    print()
+                save_model(model=model,
+                           save_dir=model_dir / 'best',
+                           verbose=verbose)
+                save_json5(data={**config,
+                                 'epoch': epoch,},
+                            path=model_dir / 'best' / 'config.json5',
+                            pretty_print=True)
+                
             scheduler.step()
 
-            if historical_best or save_mode == 'recent':
-                save_model_to_file(model=model,
-                                config=config,
-                                optimizer=optimizer,
-                                scheduler=scheduler, 
-                                model_dir=model_dir,
-                                epoch=epoch,
-                                verbose=verbose)
-                print("\nSaved to file.")
+            save_checkpoint(save_dir=model_dir,
+                            config={**config,
+                                    'epoch': epoch,},
+                            model=model,
+                            optimizer=optimizer,
+                            scheduler=scheduler,
+                            verbose=verbose)
 
-            if demo_config is not None:
-                print("\nPlotting demo...")
-                plot_demos(demo_config=demo_config,
-                           demo_name=f"{model_name}_epoch_{epoch}",
-                           model_name=model_name,
-                           hard_segmentation_threshold_quantile=0.0,
-                           model=model,
-                           model_dir=model_dir,
-                           model_config=config['model'],
-                           device=device,
-                           verbose=False,
-                           only_show_histogram=True,
-                           save_to_file=True)
-
-            print(f"\nTook {(time.time() - epoch_start_time) / 60.:.2f} minutes")
+            if verbose:
+                print("\nSaved checkpoint to file.")
+                print(f"\nTook {(time.time() - epoch_start_time) / 60.:.2f} minutes")
         except KeyboardInterrupt:
             print(f"\nInterrupted during epoch {epoch}.")
             break

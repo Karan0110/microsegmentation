@@ -54,9 +54,6 @@ def generate(tubulaton_output_file_path : Path,
     if mode == 'demo_interactive':
         print("Showing visualization of tubulin (before depoly simulation)")
         visualize(mt_points)
-
-    if verbose:
-        print(f"Using depolymerization rate: {depoly_proportion:.2f}...")
     
     #TODO - (mt, tubulin)
     tubulin_points, mt_points = simulate_depoly(mt_points=mt_points,
@@ -231,19 +228,20 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument('-od', '--output_dir', 
                         type=Path, 
-                        help='Output Directory Path\nLeave blank to use value in .env file')
+                        help='Output Directory Path (Leave blank to use value in .env file)')
 
     parser.add_argument('-i', '--input',
                         type=Path,
-                        help="Input Path (tubulaton .vtk file or directory of .vtk files)\nLeave blank to use value in .env file")
+                        help="Input Path (Leave blank to use value in .env file)")
 
     parser.add_argument('-ids', '--ids',
                         type=str,
                         help="Which file ids to use? (Either a number (e.g. 32) or a range (e.g. 32-48)")
 
     parser.add_argument('-c', '--config',
-                        type=Path,
-                        help='Path to JSON5 config file\nLeave blank to use value in .env file')
+                        type=str,
+                        default='default',
+                        help='Name of config file (Leave blank to use default)')
     
     parser.add_argument("--depoly",
                         type=float,
@@ -285,10 +283,9 @@ if __name__ == '__main__':
     else:
         tubulaton_output_path = Path(os.environ["TUBULATON_OUTPUT_DIR"])
 
-    if args.config is not None:
-        config_file_path = args.config
-    else:
-        config_file_path = Path(os.environ["GENERATE_CONFIG"])
+    config_file_dir = Path(os.environ["GENERATE_CONFIG_DIR"])
+    config_file_stem = args.config
+    config_file_path = config_file_dir / f"{config_file_stem}.json5"
 
     file_ids : Optional[range]
     file_ids = parse_number_or_range(args.ids) if (args.ids is not None) else args.ids
@@ -304,6 +301,8 @@ if __name__ == '__main__':
         depoly_proportion = depoly_proportion_distribution(**params)
     else:
         depoly_proportion = args.depoly
+    if verbose:
+        print(f"Using depolymerization rate: {depoly_proportion}")
 
     if not mode.startswith('demo'):
         if output_dir is None:

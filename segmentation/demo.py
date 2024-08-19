@@ -27,13 +27,11 @@ def load_grayscale_image(image_file_path : Path) -> np.ndarray:
 
 def get_demo_information(model : nn.Module,
                          device : torch.device,
-                         demo_config : dict, 
                          image_file_path : Path,
                          label_file_path : Union[Path, None],
                          patch_size : int,
-                         verbose : bool,
                          hard_segmentation_threshold_quantile : float,
-                         model_file_path : Union[Path, None] = None) -> Tuple[np.ndarray, Union[np.ndarray, None], np.ndarray, np.ndarray]:
+                         verbose : bool) -> Tuple[np.ndarray, Union[np.ndarray, None], np.ndarray, np.ndarray]:
     image = load_grayscale_image(image_file_path=image_file_path)
     if label_file_path is not None:
         label = load_grayscale_image(image_file_path=label_file_path)
@@ -51,27 +49,16 @@ def get_demo_information(model : nn.Module,
 
     return (image, label, segmentation, hard_segmentation)
 
-def get_demo_file_paths(demo_config : dict) -> List[Tuple[Path, Union[Path, None]]]:
-    raw_demo_file_paths : List[dict] = demo_config['demo_file_paths']
-
-    if demo_config['shuffle_data']:
-        random.shuffle(raw_demo_file_paths)
-    max_num_demos = demo_config['max_num_demos']
-    if max_num_demos is not None:
-        raw_demo_file_paths = raw_demo_file_paths[:max_num_demos]
+def get_demo_file_paths(demo_input_dir : Path) -> List[Tuple[Path, Union[Path, None]]]:
+    demo_image_file_paths = filter(lambda path: path.suffix == '.png', (demo_input_dir / "Images").glob("*"))
 
     demo_file_paths : List[Tuple[Path, Union[Path, None]]] = []
-    for raw_demo_file_path_pair in raw_demo_file_paths:
-        raw_image_file_path = raw_demo_file_path_pair['image']
-        raw_label_file_path = raw_demo_file_path_pair['label']
+    for demo_image_file_path in demo_image_file_paths:
+        demo_mask_file_path = demo_image_file_path.parent.parent / "Masks" / demo_image_file_path.name
+        if not demo_mask_file_path.exists():
+            demo_mask_file_path = None
 
-        image_file_path = Path(raw_image_file_path)
-        if raw_label_file_path is None:
-            label_file_path = None
-        else:
-            label_file_path = Path(raw_label_file_path)
-
-        demo_file_paths.append((image_file_path, label_file_path))
+        demo_file_paths.append((demo_image_file_path, demo_mask_file_path))
 
     return demo_file_paths
 
@@ -93,127 +80,133 @@ def plot_demo(demo_config : dict,
               image_file_path : Path,
               label_file_path : Union[Path, None],
               hard_segmentation_threshold_quantile : float,
-              save_to_file : bool,
-              verbose : bool = True,
-              only_show_histogram : bool = False,
-              save_file_dir : Union[Path, None] = None) -> None:
-    if verbose:
-        print(f"\nShowing demo of model: {model_file_path} on image:")
-        print(f"{image_file_path}")
-
+              save_file_dir : Path,
+              verbose : bool = False) -> None:
     image, label, segmentation, hard_segmentation = get_demo_information(model=model,
                                                                          device=device,
-                                                                         demo_config=demo_config,
                                                                          image_file_path=image_file_path,
                                                                          label_file_path=label_file_path,
                                                                          patch_size=patch_size,
                                                                          hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
-                                                                         verbose=False,
-                                                                         model_file_path=model_file_path)
+                                                                         verbose=verbose)
                                                                         
-    if not only_show_histogram:                                        
-        plot_rows = 2 if (label is None) else 3
-        plot_cols = 2
-        fig, axs = plt.subplots(plot_rows, plot_cols)#, figsize=(10 * plot_cols, 2 * plot_rows))
-        axs = axs.flatten()
-        axs_index = 0
+    plot_rows = 2 if (label is None) else 3
+    plot_cols = 2
+    fig, axs = plt.subplots(plot_rows, plot_cols)
+    axs = axs.flatten()
+    axs_index = 0
 
-        for ax in axs:
-            ax.axis('off')
+    for ax in axs:
+        ax.axis('off')
 
-        axs[axs_index].imshow(image, cmap='gray') #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Image") #type: ignore
-        axs_index += 1 #type: ignore
+    axs[axs_index].imshow(image, cmap='gray') 
+    axs[axs_index].axis('off') 
+    axs[axs_index].set_title("Image") 
+    axs_index += 1 
 
-        colored_segmentation = get_colored_image(segmentation)
-        axs[axs_index].imshow(segmentation, cmap='viridis') #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Soft Segmentation") #type: ignore
-        axs_index += 1 #type: ignore
+    colored_segmentation = get_colored_image(segmentation)
+    axs[axs_index].imshow(segmentation, cmap='viridis') 
+    axs[axs_index].axis('off') 
+    axs[axs_index].set_title("Soft Segmentation") 
+    axs_index += 1 
 
-        axs[axs_index].imshow(hard_segmentation, cmap='gray') 
+    axs[axs_index].imshow(hard_segmentation, cmap='gray') 
+    axs[axs_index].axis('off') 
+    axs[axs_index].set_title(f"Hard Segmentation\n(Quantile {hard_segmentation_threshold_quantile})")
+    axs_index += 1 
+
+    colored_hard_segmentation = get_colored_image(hard_segmentation)
+    axs[axs_index].imshow(colored_hard_segmentation) 
+    axs[axs_index].imshow(image, cmap='gray', alpha=0.7) 
+    axs[axs_index].axis('off') 
+    axs[axs_index].set_title("Hard Segmentation Overlaid") 
+    axs_index += 1 
+
+    if label is not None:
+        axs[axs_index].imshow(label, cmap='gray') 
         axs[axs_index].axis('off') 
-        axs[axs_index].set_title(f"Hard Segmentation\n(Quantile {hard_segmentation_threshold_quantile})")
+        axs[axs_index].set_title("Ground Truth") 
         axs_index += 1 
 
-        colored_hard_segmentation = get_colored_image(hard_segmentation)
-        axs[axs_index].imshow(colored_hard_segmentation) #type: ignore
-        axs[axs_index].imshow(image, cmap='gray', alpha=0.7) #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Hard Segmentation Overlaid") #type: ignore
-        axs_index += 1 #type: ignore
+        colored_label = get_colored_image(label)
+        axs[axs_index].imshow(colored_label) 
+        axs[axs_index].imshow(image, cmap='gray', alpha=0.7) 
+        axs[axs_index].axis('off') 
+        axs[axs_index].set_title("Ground Truth Overlaid") 
+        axs_index += 1 
 
-        if label is not None:
-            axs[axs_index].imshow(label, cmap='gray') #type: ignore
-            axs[axs_index].axis('off') #type: ignore
-            axs[axs_index].set_title("Ground Truth") #type: ignore
-            axs_index += 1 #type: ignore
+    save_file_path = save_file_dir / f"DEMO_{image_file_path.stem}.png"
 
-            colored_label = get_colored_image(label)
-            axs[axs_index].imshow(colored_label) #type: ignore
-            axs[axs_index].imshow(image, cmap='gray', alpha=0.7) #type: ignore
-            axs[axs_index].axis('off') #type: ignore
-            axs[axs_index].set_title("Ground Truth Overlaid") #type: ignore
-            axs_index += 1 #type: ignore
+    plt.savefig(save_file_path, 
+                format='png',
+                dpi=800)
+    if verbose:
+        print(f"\nSaved demo to {save_file_path}")
 
-        if save_to_file:
-            if save_file_dir is None:
-                raise ValueError(f"No save file dir provided!")
+    # Show log scale histogram of segmentation probabilities
+    plt.clf()
+    plt.cla()
 
-            save_file_path = save_file_dir / f"DEMO_{image_file_path.stem}.png"
-    
-            plt.savefig(save_file_path, 
-                        format='png',
-                        dpi=800)
-            if verbose:
-                print(f"\nSaved demo to {save_file_path}")
-        else:
-            plt.show()
+    spectrum = segmentation.flatten()
+
+    plt.hist(spectrum, bins=30)
+    plt.yscale('log')
+
+    plt.xlabel('Predicted Pixel Probability')
+    plt.ylabel("Frequency Density")
+
+    os.makedirs(save_file_dir / "ProbabilitySpectrums_LogScale", exist_ok=True)
+    save_file_path = save_file_dir / "ProbabilitySpectrums_LogScale" / f"{image_file_path.stem}.png"
+
+    dpi = demo_config['save_file_dpi']
+    plt.savefig(save_file_path, 
+                format='png',
+                dpi=dpi)
+    if verbose:
+        print(f"Saved log-scale probability spectrum to {save_file_path}")
 
     # Show histogram of segmentation probabilities
     plt.clf()
     plt.cla()
 
-    plt.hist(segmentation.flatten(), bins=30)
+    plt.hist(spectrum, bins=30)
+    # plt.yscale('log')
 
-    if save_to_file:
-        if save_file_dir is None:
-            raise ValueError(f"No save file dir provided!")
+    # hard_segmentation_threshold = np.quantile(spectrum, 0.9)
+    # right_spectrum = spectrum[spectrum >= hard_segmentation_threshold]
+    # plt.hist(right_spectrum, bins=30)
 
-        save_file_path = save_file_dir / f"PROB_HIST_{image_file_path.stem}.png"
- 
-        dpi = demo_config['save_file_dpi']
-        plt.savefig(save_file_path, 
-                    format='png',
-                    dpi=dpi)
-        if verbose:
-            print(f"Saved probability histogram to {save_file_path}")
-    else:
-        plt.show()
+    plt.xlabel('Predicted Pixel Probability')
+    plt.ylabel("Frequency Density")
+
+    os.makedirs(save_file_dir / "ProbabilitySpectrums", exist_ok=True)
+    save_file_path = save_file_dir / "ProbabilitySpectrums" / f"{image_file_path.stem}.png"
+
+    dpi = demo_config['save_file_dpi']
+    plt.savefig(save_file_path, 
+                format='png',
+                dpi=dpi)
+    if verbose:
+        print(f"Saved probability spectrum to {save_file_path}")
 
 def plot_demos(demo_config : dict,
                hard_segmentation_threshold_quantile: float,
                model_dir : Path,
+               demo_save_dir : Path,
+               demo_input_dir : Path,
                model : nn.Module,
                model_name : str,
                model_config : dict,
                device : torch.device,
-               verbose : bool,
-               save_to_file : bool,
-               only_show_histogram : bool = False,
-               demo_name : Optional[str] = None) -> None:
-    if demo_name is None:
-        demo_name = model_name
-
+               demo_name : str,
+               verbose : bool = False) -> None:
     state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
-    demo_save_dir = Path(os.environ['DEMO_SAVE_PATH']) / demo_name
     os.makedirs(demo_save_dir, exist_ok=True)
 
     patch_size = model_config['patch_size']
 
-    demo_file_paths = get_demo_file_paths(demo_config=demo_config)
+    demo_file_paths = get_demo_file_paths(demo_input_dir=demo_input_dir)
 
     for image_file_path, label_file_path in demo_file_paths:
         plot_demo(demo_config=demo_config,
@@ -225,9 +218,9 @@ def plot_demos(demo_config : dict,
                 hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                 label_file_path=label_file_path,
                 save_file_dir=demo_save_dir,
-                only_show_histogram=only_show_histogram,
-                verbose=verbose,
-                save_to_file=save_to_file)
+                verbose=verbose)
+    
+    plt.close()
 
 def parse_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -238,12 +231,23 @@ def parse_args() -> argparse.Namespace:
     # Positional argument (mandatory)
     parser.add_argument('-c', '--config', 
                         type=Path, 
-                        required=True,
-                        help='Config File Path')
+                        help='Config File Path (Leave blank to use environment variable value)')
+    
+    parser.add_argument('-sd', '--savedir', 
+                        type=Path, 
+                        help='Demo Save Path (Leave blank to use environment variable value)')
+    
+    parser.add_argument('-dd', '--datadir', 
+                        type=Path, 
+                        help='Demo Data Path (Leave blank to use environment variable value)')
+    
+    parser.add_argument('-i', '--inputdir', 
+                        type=Path, 
+                        help='Demo Input Path (Leave blank to use environment variable value)')
     
     parser.add_argument('-md', '--modeldir', 
                         type=Path, 
-                        help='Model Path')
+                        help='Model Path (Leave blank to use environment variable value)')
 
     parser.add_argument('-n', '--name',
                         type=str,
@@ -252,43 +256,26 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument('-t', '--threshold',
                         type=float,
-                        help="Threshold quantile for hard segmentation (Else use default value in config file)")
-
-    parser.add_argument('-v', '--verbose', 
-                        action='store_true', 
-                        help='Increase output verbosity')
+                        help="Threshold quantile for hard segmentation (Leave blank to use value in config file)")
 
     parser.add_argument('-dn', '--demoname',
                         type=str,
                         default=None,
                         help="Name of demo save file (Leave blank to use same name as model)")
 
-    parser.add_argument('--show', 
+    parser.add_argument('-v', '--verbose', 
                         action='store_true', 
-                        help='Show demos in window instead of saving to files')
+                        help='Increase output verbosity')
 
     args = parser.parse_args()
 
     return args
-
 
 if __name__ == '__main__':
     args = parse_args()
     load_dotenv()
 
     verbose = args.verbose
-    show_mode = args.show
-
-    #  Load the demo config file
-    demo_config_file_path = args.config
-    demo_config = load_json5(demo_config_file_path)
-    if not isinstance(demo_config, dict):
-        raise ValueError(f"Invalid demo config! Must be a dict")
-
-    # hard segmentation threshold
-    hard_segmentation_threshold_quantile = args.threshold
-    if hard_segmentation_threshold_quantile is None:
-        hard_segmentation_threshold_quantile = float(demo_config['hard_segmentation_threshold_quantile'])
 
     # Load model
     model_name = args.name
@@ -307,13 +294,52 @@ if __name__ == '__main__':
                                          device=device)
 
     patch_size = config['model']['patch_size']
+
+    #  Load the demo config file
+    if args.config is not None:
+        demo_config_file_path = args.config
+    else:
+        demo_config_file_path = Path(os.environ['DEMO_CONFIG_PATH'])
+
+    demo_config = load_json5(demo_config_file_path)
+    if not isinstance(demo_config, dict):
+        raise ValueError(f"Invalid demo config! Must be a dict")
+
+    # Demo Name
+    if args.demoname is not None:
+        demo_name = args.demoname
+    else:
+        demo_name = model_name
+
+    # Demo Save Dir
+    if args.savedir is not None:
+        demo_save_dir = args.savedir
+    else:
+        demo_save_dir = Path(os.environ['DEMO_SAVE_PATH'])
+    demo_save_dir = demo_save_dir / demo_name
         
+    # Demo Input Dir
+    if args.inputdir is not None:
+        demo_input_dir = args.inputdir
+    else:
+        demo_input_dir = Path(os.environ['DEMO_INPUT_PATH']) 
+
+    # Hard segmentation threshold
+    hard_segmentation_threshold_quantile = args.threshold
+    if hard_segmentation_threshold_quantile is None:
+        hard_segmentation_threshold_quantile = float(demo_config['hard_segmentation_threshold_quantile'])
+
+    if verbose:
+        print(f"\nModel directory: {model_dir}")
+
     plot_demos(demo_config=demo_config,
                model_name=model_name,
                hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                model=model,
                model_dir=model_dir,
+               demo_save_dir=demo_save_dir,
+               demo_input_dir=demo_input_dir,
+               demo_name=demo_name,
                model_config=config['model'],
                device=device,
-               verbose=verbose,
-               save_to_file=(not show_mode))
+               verbose=verbose)
