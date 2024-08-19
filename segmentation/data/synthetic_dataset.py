@@ -2,8 +2,7 @@ import os
 import multiprocessing
 import re
 from pathlib import Path
-from typing import Tuple, Callable, Union
-from dotenv import load_dotenv
+from typing import Tuple, Callable, Union, Optional
 
 import numpy as np
 
@@ -138,7 +137,8 @@ def get_data_loaders(base_dir : Path,
                      max_batches_per_train_epoch : Union[int, None],
                      max_batches_per_test : Union[int, None],
                      batch_size : int,
-                     verbose : bool) -> Tuple[DataLoader, DataLoader]:
+                     num_workers : Optional[int] = None,
+                     verbose : bool = False) -> Tuple[DataLoader, DataLoader]:
     # Preprocess color_to_label to appropriate form
     color_to_label = {int(key) : value for key, value in color_to_label.items()}
 
@@ -180,8 +180,10 @@ def get_data_loaders(base_dir : Path,
 
 
     # Create DataLoaders
-    
-    if 'NUM_WORKERS' in os.environ:
+    if num_workers is not None:
+        if verbose:
+            print(f"\nUsing num_workers={num_workers}")
+    elif 'NUM_WORKERS' in os.environ:
         num_workers = int(os.environ['NUM_WORKERS'])
         if verbose:
             print(f"\nEnvironment variable NUM_WORKERS found. Using num_workers={num_workers}")

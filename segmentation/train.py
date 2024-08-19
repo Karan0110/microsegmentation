@@ -17,7 +17,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from epoch import train_model, test_model
 from data.synthetic_dataset import get_data_loaders, Labels
-from criterions.utils import get_criterions
 from global_utils import load_json5, save_json5
 from global_utils.arguments import get_argument, get_path_argument
 from utils import get_device

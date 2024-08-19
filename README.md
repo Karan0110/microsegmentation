@@ -1,6 +1,3 @@
-* Include a note about the `demo_segmentation_cache`
-
-
 * When compiling tubulaton on HPC you must run
 `module load vtk/7.1.1`
 before running `cmake ..`
@@ -38,11 +35,11 @@ This project was tested on `Python 3.11.8`.
 
 To set up the project:
 
-* Create separate virtual environments within each module by running:
+* Create *separate* virtual environments for each module by running (within the module folder):
 	* `python -m venv .venv_generation` 
 	* `python -m venv .venv_segmentation`
-* You can (de)activate a virtual environment by running
-	* `source .venv/bin/activate` 
+* You can (de)activate a virtual environment by running the below commands. Ensure you have the correct environment activated when installing/running.
+	* `source [virtual environment name]/bin/activate` 
 	* `deactivate`
 * Install the required libraries by running
 	* `pip install -r requirements.txt`
