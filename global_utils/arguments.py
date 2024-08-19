@@ -7,9 +7,13 @@ from pathlib import Path
 def get_argument(cl_args : argparse.Namespace, 
                  cl_arg_name : str, 
                  env_var_name : str,
-                 ArgumentType : Type) -> Any:
+                 ArgumentType : Type,
+                 default : Any = None) -> Any:
     if getattr(cl_args,cl_arg_name) is None:
-        return ArgumentType(os.environ[env_var_name])
+        if env_var_name in os.environ:
+            return ArgumentType(os.environ[env_var_name])
+        else:
+            return default
     else:
         return getattr(cl_args, cl_arg_name)
 

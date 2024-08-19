@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse
 import json5
 import time
-from typing import Iterable, Tuple, Any, Union, List
+from typing import Iterable, Tuple, Any, Union, List, Optional
 import itertools
 import shutil
 import copy
@@ -44,6 +44,14 @@ def get_command_line_args() -> argparse.Namespace:
                         required=True,
                         help="Model name (continues training any pre-existing model if checkpoint exists)")
 
+    parser.add_argument('-nw', '--numworkers',
+                        type=int,
+                        help="Number of workers for data loader (Leave blank if you don't know what this means)")
+
+    parser.add_argument('-w', '--weights',
+                        type=str,
+                        help="Begin training from another model's weights (This option cannot be used when training from a checkpoint)")
+
     parser.add_argument('-c', '--config', 
                         type=Path, 
                         help='Config Directory (Ignores and uses a pre-existing config if it checkpoint exists)')
@@ -73,14 +81,28 @@ if __name__ == '__main__':
     load_dotenv()
     args = get_command_line_args()
 
+    verbose : bool
     verbose = args.verbose
+
+    model_name : str
     model_name = args.name
+
+    num_epochs : int
     num_epochs = args.epochs
 
     model_dir = get_path_argument(cl_args=args,
                                   cl_arg_name='modeldir',
                                   env_var_name='MODELS_PATH')
     model_dir = model_dir / model_name
+
+    num_workers : Optional[int]
+    num_workers = get_argument(cl_args=args,
+                               cl_arg_name='numworkers',
+                               env_var_name='NUM_WORKERS',
+                               ArgumentType=int)
+    
+    initial_weight_model_name : str
+    initial_weight_model_name = args.weights
 
     config_path = get_path_argument(cl_args=args,
                                     cl_arg_name='config',
@@ -126,6 +148,23 @@ if __name__ == '__main__':
     scheduler = checkpoint['scheduler']
     config = checkpoint['config']
 
+    # Use pre-existing weights
+    # ------------------------
+
+    is_new = checkpoint['is_new']
+    if initial_weight_model_name is not None:
+        if not is_new:
+            raise ValueError(f"An initial model ({initial_weight_model_name}) was provided to use as initial weights.\nThis is not allowed when training from a checkpoint!")
+
+        initial_state_file_path = model_dir.parent / initial_weight_model_name / 'model.pth'
+
+        initial_state_dict : dict = torch.load(initial_state_file_path,
+                                               weights_only=True,
+                                               map_location=device)
+        model.load_state_dict(initial_state_dict)
+
+        if verbose:
+            print(f"\nUsing initial weights from model: {initial_weight_model_name}")
 
     # Set up data loaders
     # -------------------
@@ -142,6 +181,7 @@ if __name__ == '__main__':
                                                  base_dir=dataset_dir,
                                                  augmentation_config=config['augmentation'],
                                                  **data_config,
+                                                 num_workers=num_workers,
                                                  verbose=verbose)
 
     # Training and testing loop

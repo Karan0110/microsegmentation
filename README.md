@@ -74,7 +74,7 @@ See below for example `.env` files that show all the variables you can define an
 	# Path to config for training, model, etc 
 	# It may either be a single .json5 file or a folder of .json5 files that will be stitched together
 	# by the program (as is done in the provided config files) 
-	CONFIG_PATH=segmentation/configs/test_config
+	CONFIG_PATH=segmentation/configs/config
 	
 	# Path to demo config file
 	# It may either be a single .json5 file or a folder of .json5 files that will be stitched together
@@ -113,13 +113,15 @@ The `generation` module consists of 2 executable files:
 
 ## Segmentation
 
-The `segmentation` module consists of 3 executable files:
+The `segmentation` module consists of 3 executable python files:
 
 * `train.py` (The file `run_train.sh` in `local_scripts` is just a shortcut so you don't have to keep copying the same directory/file paths) 
 * `demo.py`
 * `timeseries_inference.py`
 
 You can see a list of parameters and explanations of them by running `python [insert file] -h`
+
+There are also various `.sh` scripts intended for running on Mac/Linux/HPC clusters. 
 
 ### Train
 

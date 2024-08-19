@@ -1,4 +1,4 @@
-from load_json5 import load_json5
+from global_utils import load_json5
 import os
 import json5
 from pathlib import Path
