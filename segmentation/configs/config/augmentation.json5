@@ -1,4 +1,8 @@
 {
+  "transforms": [],
+}
+
+/*{
   "transforms": [
     {
       "name": "HorizontalFlip",
@@ -15,14 +19,14 @@
         // "p": 0.5
       }
     },
-    {
-      "name": "RandomScale",
-      "params": {
-        "scale_limit": 0.5,  // Scaling factor range (default 0.1)
-        "interpolation": 1,  // Interpolation method, e.g., 1: Linear, 0: Nearest
-        // "p": 0.5
-      }
-    },
+    // {
+    //   "name": "RandomScale",
+    //   "params": {
+    //     "scale_limit": 0.5,  // Scaling factor range (default 0.1)
+    //     "interpolation": 1,  // Interpolation method, e.g., 1: Linear, 0: Nearest
+    //     // "p": 0.5
+    //   }
+    // },
     {
       "name": "RandomBrightnessContrast",
       "params": {
@@ -50,4 +54,4 @@
       }
     },
   ]
-}
+}*/

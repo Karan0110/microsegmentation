@@ -133,6 +133,7 @@ def get_data_loaders(base_dir : Path,
                      patch_size : int,
                      augmentation_config : dict,
                      color_to_label : dict,
+                     dataset_name : str,
                      train_test_split : float,
                      max_batches_per_train_epoch : Union[int, None],
                      max_batches_per_test : Union[int, None],
@@ -151,7 +152,7 @@ def get_data_loaders(base_dir : Path,
         transform = transform_class(**item['params'])
         transform_list.append(transform)
 
-    transform_list.append(A.Normalize(mean=(0.5,), std=(0.5,), max_pixel_value=255.0))
+    # transform_list.append(A.Normalize(mean=(0.5,), std=(0.5,), max_pixel_value=255.0))
     transform_list.append(A.RandomCrop(height=patch_size, width=patch_size))
     transform_list.append(ToTensorV2())
 
@@ -163,7 +164,10 @@ def get_data_loaders(base_dir : Path,
     else:
         max_batches = None
 
-    dataset = SyntheticDataset(base_dir=base_dir, 
+    dataset_dir = base_dir / dataset_name
+    if verbose:
+        print(f"\nTraining data path: {dataset_dir}")
+    dataset = SyntheticDataset(base_dir=dataset_dir, 
                                transform=transform,
                                color_to_label=color_to_label,
                                max_batches=max_batches)

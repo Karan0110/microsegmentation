@@ -27,30 +27,30 @@ def _get_criterion(criterion_config : dict,
                   device : torch.device) -> nn.Module:
     criterion_name = criterion_config['name']
 
-    raw_criterion_params = criterion_config['params']
-    new_criterion_params = raw_criterion_params.copy()
-
-    if criterion_name == 'CrossEntropyLoss':
-        if 'weight' in raw_criterion_params:
-            raw_class_weights = raw_criterion_params['weight']
-            new_criterion_params['weight'] = weight_dict_to_tensor(raw_class_weights,
-                                                                   normalize=True).to(device)
-
-    if criterion_name == 'FocalLoss':
-        if 'alpha' in raw_criterion_params:
-            raw_weights = raw_criterion_params['alpha']
-            new_criterion_params['alpha'] = weight_dict_to_tensor(raw_weights,
-                                                            normalize=True).to(device)
-
-    if criterion_name == "TverskyLoss":
-        new_criterion_params['foreground_label'] = Labels.POLYMERIZED.value
-
     if hasattr(nn, criterion_name):
         LossFunction = getattr(nn, criterion_name)
     elif hasattr(criterions, criterion_name):
         LossFunction = getattr(criterions, criterion_name)
     else:
         raise ValueError(f"The criterion specified: {criterion_name} is not a valid criterion!")
+
+    raw_criterion_params = criterion_config.get('params', {})
+    new_criterion_params = raw_criterion_params.copy()
+
+    if issubclass(LossFunction, nn.CrossEntropyLoss):
+        if 'weight' in raw_criterion_params:
+            raw_class_weights = raw_criterion_params['weight']
+            new_criterion_params['weight'] = weight_dict_to_tensor(raw_class_weights,
+                                                                   normalize=True).to(device)
+
+    if issubclass(LossFunction, criterions.FocalLoss):
+        if 'alpha' in raw_criterion_params:
+            raw_weights = raw_criterion_params['alpha']
+            new_criterion_params['alpha'] = weight_dict_to_tensor(raw_weights,
+                                                                  normalize=True).to(device)
+
+    if issubclass(LossFunction, criterions.TverskyLoss):
+        new_criterion_params['foreground_label'] = Labels.POLYMERIZED.value
 
     criterion : nn.Module = LossFunction(**new_criterion_params)
     criterion = criterion.to(device)

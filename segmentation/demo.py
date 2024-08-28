@@ -17,13 +17,10 @@ from segmentation.utils import get_device
 from global_utils import load_json5
 
 from segmentation.models.inference import get_segmentation, get_hard_segmentation
-from segmentation.models.serialization import load_model_from_file, get_model_save_file_paths
+from utils.checkpoint import load_model
 
-def load_grayscale_image(image_file_path : Path) -> np.ndarray:
-    image = np.array(Image.open(image_file_path).convert('L'))
-    image = image.astype(np.float32) / 255.
-
-    return image
+from global_utils.arguments import get_path_argument
+from global_utils import load_grayscale_image
 
 def get_demo_information(model : nn.Module,
                          device : torch.device,
@@ -76,7 +73,6 @@ def plot_demo(demo_config : dict,
               model : nn.Module,
               device : torch.device,
               patch_size : int,
-              model_file_path : Path,
               image_file_path : Path,
               label_file_path : Union[Path, None],
               hard_segmentation_threshold_quantile : float,
@@ -200,8 +196,6 @@ def plot_demos(demo_config : dict,
                device : torch.device,
                demo_name : str,
                verbose : bool = False) -> None:
-    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
-
     os.makedirs(demo_save_dir, exist_ok=True)
 
     patch_size = model_config['patch_size']
@@ -213,7 +207,6 @@ def plot_demos(demo_config : dict,
                 model=model,
                 device=device,
                 patch_size=patch_size,
-                model_file_path=state_save_file_path,
                 image_file_path=image_file_path,
                 hard_segmentation_threshold_quantile=hard_segmentation_threshold_quantile,
                 label_file_path=label_file_path,
@@ -280,27 +273,26 @@ if __name__ == '__main__':
     # Load model
     model_name = args.name
 
-    if args.modeldir is not None:
-        model_dir = args.modeldir
-    else:
-        model_dir = Path(os.environ["MODELS_PATH"]) 
+    model_dir = get_path_argument(cl_args=args,
+                                  cl_arg_name='modeldir',
+                                  env_var_name='MODELS_PATH')
     model_dir = model_dir / model_name
-
-    state_save_file_path, config_save_file_path = get_model_save_file_paths(model_dir=model_dir)
 
     device = get_device(verbose=verbose)
 
-    model, config = load_model_from_file(model_dir=model_dir,
-                                         device=device)
+    config = load_json5(model_dir / 'config.json5')
+
+    model = load_model(model_config=config['model'],
+                       device=device,
+                       save_dir=model_dir,
+                       verbose=verbose)
 
     patch_size = config['model']['patch_size']
 
     #  Load the demo config file
-    if args.config is not None:
-        demo_config_file_path = args.config
-    else:
-        demo_config_file_path = Path(os.environ['DEMO_CONFIG_PATH'])
-
+    demo_config_file_path = get_path_argument(cl_args=args,
+                                              cl_arg_name='config',
+                                              env_var_name='DEMO_CONFIG_PATH') 
     demo_config = load_json5(demo_config_file_path)
     if not isinstance(demo_config, dict):
         raise ValueError(f"Invalid demo config! Must be a dict")
@@ -312,18 +304,16 @@ if __name__ == '__main__':
         demo_name = model_name
 
     # Demo Save Dir
-    if args.savedir is not None:
-        demo_save_dir = args.savedir
-    else:
-        demo_save_dir = Path(os.environ['DEMO_SAVE_PATH'])
+    demo_save_dir = get_path_argument(cl_args=args,
+                                      cl_arg_name='savedir',
+                                      env_var_name='DEMO_SAVE_PATH')
     demo_save_dir = demo_save_dir / demo_name
         
     # Demo Input Dir
-    if args.inputdir is not None:
-        demo_input_dir = args.inputdir
-    else:
-        demo_input_dir = Path(os.environ['DEMO_INPUT_PATH']) 
-
+    demo_input_dir = get_path_argument(cl_args=args,
+                                      cl_arg_name='inputdir',
+                                      env_var_name='DEMO_INPUT_PATH')
+    
     # Hard segmentation threshold
     hard_segmentation_threshold_quantile = args.threshold
     if hard_segmentation_threshold_quantile is None:

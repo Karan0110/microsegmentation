@@ -1,5 +1,17 @@
 # Micro(tubule) Segmentation
 
+This program was developed to perform segmentations of fluorescent micrographs of microtubules (in varying states of depolymerization) in root hair cells exposed to the Oryzalin.
+
+This project uses `Python 3.11.8`.
+
+### References 
+
+Ronneberger, O., Fischer, P., & Brox, T. (2015). [U-Net: Convolutional networks for biomedical image segmentation](https://arxiv.org/abs/1505.04597). In *International Conference on Medical Image Computing and Computer-Assisted Intervention* (pp. 234-241). Springer, Cham.
+
+### Author
+
+Karan Elangovan, <krnelangovan@gmail.com>
+
 ## Installation
 
 The project is made of 2 separate modules:
@@ -7,7 +19,6 @@ The project is made of 2 separate modules:
 * `generation` (generate synthetic data)
 * `segmentation` (train/run inference with a model to segment images)
 
-This project was tested on `Python 3.11.8`.
 
 To set up the project:
 

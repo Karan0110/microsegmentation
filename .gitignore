@@ -11,7 +11,7 @@ __pycache__/
 # HPC jobs
 machine.file.*
 slurm-*.out
-job_templates/
+/job_templates/
 
 # Virtual environments
 .venv_segmentation/
@@ -19,8 +19,8 @@ job_templates/
 
 # General
 
-JupyterNotebooks/
-legacy_resnet_code/
+/JupyterNotebooks/
+/legacy_resnet_code/
 Sandbox.ipynb
 sandbox.py
 *_DEPRECATED.py
@@ -28,24 +28,29 @@ sandbox.py
 .env
 
 # Program outputs
-Models/
-runs/
-segmentation_demos/
-generation_demos/
+
+/Models/
+/runs/
+/segmentation_demos/
+/generation_demos/
+/ML_Experiments/configs/
+/ML_Experiments/test_configs/
 
 # Personal
-Tasks.md
-ResearchLeads.md
-HyperparamSweep.md
-Experiments.md
-Poster.md
-ProjectBackground.md
 
-Notes/
-Papers/
+/Tasks.md
+/ResearchLeads.md
+/HyperparamSweep.md
+/Experiments.md
+/Poster.md
+/ProjectBackground.md
+/HJ_Meeting.md
+
+/ML_Experiments/
+/Notes/
+/Papers/
 
 # Data
 
-SyntheticData_*/
-SyntheticData/
-Experimental_Data/
+/SyntheticData/
+/Experimental_Data/

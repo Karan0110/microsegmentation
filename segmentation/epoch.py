@@ -35,6 +35,8 @@ def train_model(model : nn.Module,
 
         loss = torch.tensor(0.0).to(device)
         for criterion in criterions:
+            if criterion['weight'] == 0.0:
+                continue
             loss += criterion['criterion'](outputs, targets) * criterion['weight']
         loss.backward()
     

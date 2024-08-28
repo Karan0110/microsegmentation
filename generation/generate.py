@@ -241,11 +241,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('-c', '--config',
                         type=str,
                         default='default',
-                        help='Name of config file (Leave blank to use default)')
+                        help='Name of config file without .json5 suffix (Leave blank to use default.json5)')
     
     parser.add_argument("--depoly",
                         type=float,
-                        help="The rate of depolymerization. Leave blank to draw a random value from the distribution specified in config")
+                        help="The rate of depolymerization (Leave blank to draw a random value from the distribution specified in config)")
 
     parser.add_argument('--mode', choices=['demo_interactive', 'demo_headless', 'overwrite', 'update'], 
                         default='update',

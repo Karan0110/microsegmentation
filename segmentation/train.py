@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import argparse
-import json5
 import time
 from typing import Iterable, Tuple, Any, Union, List, Optional
 import itertools
@@ -16,8 +15,8 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from epoch import train_model, test_model
-from data.synthetic_dataset import get_data_loaders, Labels
-from global_utils import load_json5, save_json5
+from data.synthetic_dataset import get_data_loaders 
+from global_utils import save_json5
 from global_utils.arguments import get_argument, get_path_argument
 from utils import get_device
 
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     model_name : str
     model_name = args.name
 
-    num_epochs : int
+    num_epochs : Optional[int]
     num_epochs = args.epochs
 
     model_dir = get_path_argument(cl_args=args,
@@ -96,10 +95,7 @@ if __name__ == '__main__':
     model_dir = model_dir / model_name
 
     num_workers : Optional[int]
-    num_workers = get_argument(cl_args=args,
-                               cl_arg_name='numworkers',
-                               env_var_name='NUM_WORKERS',
-                               ArgumentType=int)
+    num_workers = args.numworkers
     
     initial_weight_model_name : str
     initial_weight_model_name = args.weights
@@ -107,6 +103,8 @@ if __name__ == '__main__':
     config_path = get_path_argument(cl_args=args,
                                     cl_arg_name='config',
                                     env_var_name='CONFIG_PATH')
+    if verbose:
+        print(f"\nConfig path: {config_path}")
 
     log_dir = get_path_argument(cl_args=args,
                                 cl_arg_name='logdir',
@@ -116,6 +114,7 @@ if __name__ == '__main__':
     dataset_dir = get_path_argument(cl_args=args,
                                     cl_arg_name='datadir',
                                     env_var_name='DATA_PATH')
+    
 
     # Set up device
     # --------------
@@ -168,10 +167,6 @@ if __name__ == '__main__':
 
     # Set up data loaders
     # -------------------
-    
-    if verbose:
-        print(f"\nTraining Data: {dataset_dir}")
-
     data_config = config['data']
     patch_size = config['model']['patch_size']
     if verbose:
