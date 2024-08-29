@@ -12,7 +12,7 @@
 #! Name of the job:
 #SBATCH -J train
 #! Which project should be charged (NB Wilkes2 projects end in '-GPU'):
-#SBATCH -A JONSSON-SL3-GPU
+#SBATCH -A JONSSON-SL2-GPU
 #! How many whole nodes should be allocated?
 #SBATCH --nodes=1
 #! How many (MPI) tasks will there be in total?
@@ -67,11 +67,11 @@ application="python $segmentation_dir/train.py"
 #! TODO TESTING - we have modified to accomodate an array job parameter sweep
 
 #! Run options for the application:
-config_file_path="$base_dir/param_sweep_config_files/config_$SLURM_ARRAY_TASK_ID"
-#! TODO TESTING
-epochs=5 #100
 
-options="--config $config_file_path --name $1 --datadir $data_dir --modeldir $model_dir --logdir $log_dir --epochs $epochs --verbose --overwrite"
+#! TODO TESTING
+epochs=1 #100
+
+options="--name $1 --epochs $epochs --verbose"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
