@@ -52,8 +52,8 @@ def get_command_line_args() -> argparse.Namespace:
                         help="Begin training from another model's weights (This option cannot be used when training from a checkpoint)")
 
     parser.add_argument('-c', '--config', 
-                        type=Path, 
-                        help='Config Directory (Ignores and uses a pre-existing config if it checkpoint exists)')
+                        type=str, 
+                        help='Name of Config File (Leave blank to use [model_name].json5)')
 
     parser.add_argument('-dd', '--datadir',
                         type=Path,
@@ -103,6 +103,9 @@ if __name__ == '__main__':
     config_path = get_path_argument(cl_args=args,
                                     cl_arg_name='config',
                                     env_var_name='CONFIG_PATH')
+    config_dir = Path(os.environ['CONFIG_PATH'])
+    config_name = args.config if (args.config is not None) else model_name
+    config_path = Path(os.environ['BASE_DIR']) / config_dir / f"{config_name}.json5"
     if verbose:
         print(f"\nConfig path: {config_path}")
 
@@ -267,6 +270,6 @@ if __name__ == '__main__':
     minutes = (time_taken // 60) % 60
     hours = time_taken // (60**2)
 
-    print(f"\nTook {hours} hrs {minutes} min in total.")
+    print(f"\nTook {hours} hrs {minutes} min {seconds} s in total.")
 
     writer.close()

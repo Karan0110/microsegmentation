@@ -190,11 +190,11 @@ def get_data_loaders(base_dir : Path,
     elif 'NUM_WORKERS' in os.environ:
         num_workers = int(os.environ['NUM_WORKERS'])
         if verbose:
-            print(f"\nEnvironment variable NUM_WORKERS found. Using num_workers={num_workers}")
+            print(f"\nEnvironment variable NUM_WORKERS found. \nUsing num_workers={num_workers}")
     else:
         num_workers = multiprocessing.cpu_count()
         if verbose:
-            print(f"\nEnvironment variable NUM_WORKERS not set. Using num_workers={num_workers}")
+            print(f"\nEnvironment variable NUM_WORKERS not set. \nUsing num_workers={num_workers}")
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)

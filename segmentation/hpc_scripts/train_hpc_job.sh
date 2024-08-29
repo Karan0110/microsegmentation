@@ -68,9 +68,6 @@ application="python $segmentation_dir/train.py"
 
 #! Run options for the application:
 config_file_path="$base_dir/param_sweep_config_files/config_$SLURM_ARRAY_TASK_ID"
-model_dir="$base_dir/ModelSaveFiles"
-data_dir="$base_dir/Synthetic"
-log_dir="$base_dir/runs"
 #! TODO TESTING
 epochs=5 #100
 
