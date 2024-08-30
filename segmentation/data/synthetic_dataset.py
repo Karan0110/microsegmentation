@@ -191,6 +191,10 @@ def get_data_loaders(base_dir : Path,
         num_workers = int(os.environ['NUM_WORKERS'])
         if verbose:
             print(f"\nEnvironment variable NUM_WORKERS found. \nUsing num_workers={num_workers}")
+    elif "SLURM_CPUS_PER_TASK" in os.environ:
+        num_workers = int(os.environ['SLURM_CPUS_PER_TASK'])
+        if verbose:
+            print(f"\nEnvironment variable SLURM_CPUS_PER_TASK found. \nUsing num_workers={num_workers}")
     else:
         num_workers = multiprocessing.cpu_count()
         if verbose:
