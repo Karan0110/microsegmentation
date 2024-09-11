@@ -36,10 +36,11 @@
     },
     criterions: [
         {
-            name: "CrossEntropyLoss",
+            name: "FocalLoss",
             weight: 0.5,
             params: {
-                weight: {
+				gamma: 2.0,
+                alpha: {
                     POLYMERIZED: 0.9,
                     DEPOLYMERIZED: 0.1,
                 },

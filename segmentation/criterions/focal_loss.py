@@ -37,9 +37,10 @@ class FocalLoss(nn.Module):
         # Apply alpha factor per class
         if self.alpha is not None:
             if self.alpha.dim() == 1:
-                at = self.alpha[targets].view(-1)
+                at = self.alpha[targets]
             else:
                 at = self.alpha.gather(0, targets.view(-1))
+
             cross_entropy_loss = cross_entropy_loss * at
 
         # Compute the focal loss components
