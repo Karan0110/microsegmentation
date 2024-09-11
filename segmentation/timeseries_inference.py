@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import tifffile
 
 from .models.inference import get_segmentation, get_hard_segmentation
-from .models.serialization import load_model_from_file
+from .utils.serialization import load_model_from_file
 from .utils import get_device
 
 from global_utils import load_json5

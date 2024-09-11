@@ -14,14 +14,13 @@ import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
-from epoch import train_model, test_model
+from epoch import train_model, eval_model
 from data.synthetic_dataset import get_data_loaders 
-from global_utils import save_json5
+from global_utils import save_json5, load_json5
 from global_utils.arguments import get_argument, get_path_argument
 from utils import get_device
 
-from utils.checkpoint import save_checkpoint, load_checkpoint
-from utils.serialization import save_model
+from utils.serialization import save_model, save_checkpoint, load_checkpoint, init_checkpoint
 
 def get_command_line_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -55,9 +54,13 @@ def get_command_line_args() -> argparse.Namespace:
                         type=str, 
                         help='Name of Config File (Leave blank to use [model_name].json5)')
 
-    parser.add_argument('-dd', '--datadir',
+    parser.add_argument('-td', '--traindir',
                         type=Path,
                         help="Training data directory")
+
+    parser.add_argument('-ed', '--evaldir',
+                        type=Path,
+                        help="Eval data directory")
 
     parser.add_argument('-ld', '--logdir',
                         type=Path,
@@ -77,7 +80,7 @@ if __name__ == '__main__':
     # Handle CL arguments
     # --------------------
 
-    load_dotenv()
+    load_dotenv(dotenv_path='../.env')
     args = get_command_line_args()
 
     verbose : bool
@@ -100,24 +103,22 @@ if __name__ == '__main__':
     initial_weight_model_name : str
     initial_weight_model_name = args.weights
 
-    config_path = get_path_argument(cl_args=args,
-                                    cl_arg_name='config',
-                                    env_var_name='CONFIG_PATH')
-    config_dir = Path(os.environ['CONFIG_PATH'])
+    config_dir = Path(os.environ['SEGMENTATION_CONFIGS_PATH'])
     config_name = args.config if (args.config is not None) else model_name
     config_path = Path(os.environ['BASE_DIR']) / config_dir / f"{config_name}.json5"
-    if verbose:
-        print(f"\nConfig path: {config_path}")
 
     log_dir = get_path_argument(cl_args=args,
                                 cl_arg_name='logdir',
-                                env_var_name='LOG_PATH')
+                                env_var_name='SEGMENTATION_TRAINING_LOG_PATH')
     log_dir = log_dir / model_name
 
-    dataset_dir = get_path_argument(cl_args=args,
-                                    cl_arg_name='datadir',
-                                    env_var_name='DATA_PATH')
-    
+    train_datasets_dir = get_path_argument(cl_args=args,
+                                    cl_arg_name='traindir',
+                                    env_var_name='TRAIN_DATA_PATH')
+
+    eval_datasets_dir = get_path_argument(cl_args=args,
+                                    cl_arg_name='evaldir',
+                                    env_var_name='EVAL_DATA_PATH')
 
     # Set up device
     # --------------
@@ -134,26 +135,40 @@ if __name__ == '__main__':
     # Initialize model, loss function, optimizer, and scheduler
     # ---------------------------------------------------------
 
-    checkpoint = load_checkpoint(device=device,
-                                 config_path=config_path,
-                                 save_dir=model_dir,
-                                 verbose=verbose)
+    config : dict
+
+    is_new = not model_dir.exists()
+
+    if not is_new:
+        config_path = model_dir / 'config.json5'
+        config = load_json5(config_path)
+
+        checkpoint = load_checkpoint(device=device,
+                                    model_dir=model_dir,
+                                    verbose=verbose)
+    else:
+        config = load_json5(config_path)
+
+        checkpoint = init_checkpoint(device=device,
+                                     verbose=verbose,
+                                     config=config)
+
+    if verbose:
+        print(f"\nConfig path: {config_path}")
+
     model : nn.Module
     optimizer : torch.optim.Optimizer
     criterions : List[dict]
     scheduler : torch.optim.lr_scheduler.LRScheduler
-    config : dict
 
     model = checkpoint['model']
     optimizer = checkpoint['optimizer']
     criterions = checkpoint['criterions']
     scheduler = checkpoint['scheduler']
-    config = checkpoint['config']
 
     # Use pre-existing weights
     # ------------------------
 
-    is_new = checkpoint['is_new']
     if initial_weight_model_name is not None:
         if not is_new:
             raise ValueError(f"An initial model ({initial_weight_model_name}) was provided to use as initial weights.\nThis is not allowed when training from a checkpoint!")
@@ -175,17 +190,17 @@ if __name__ == '__main__':
     if verbose:
         print(f"\nPatch size: {patch_size}")
 
-    train_loader, test_loader = get_data_loaders(patch_size=patch_size,
-                                                 base_dir=dataset_dir,
+    train_loader, eval_loader = get_data_loaders(train_datasets_dir=train_datasets_dir,
+                                                 eval_datasets_dir=eval_datasets_dir,
+                                                patch_size=patch_size,
                                                  augmentation_config=config['augmentation'],
                                                  **data_config,
                                                  num_workers=num_workers,
                                                  verbose=verbose)
 
-    # Training and testing loop
+    # Training and eval loop
     # -------------------------
 
-    is_new = checkpoint['is_new']
     if is_new:
         print(f"\nClearing any old tensorboard logs...")
         shutil.rmtree(writer.log_dir)
@@ -217,11 +232,11 @@ if __name__ == '__main__':
                         epoch=epoch,
                         verbose=verbose)
 
-            test_loss = test_model(model=model, 
+            test_loss = eval_model(model=model, 
                                     device=device, 
                                     writer=writer,
                                     epoch=epoch,
-                                    test_loader=test_loader, 
+                                    eval_loader=eval_loader, 
                                     criterions=criterions,
                                     verbose=verbose)
 

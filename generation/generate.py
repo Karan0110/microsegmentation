@@ -268,7 +268,7 @@ if __name__ == '__main__':
     random.seed(1000)
 
     args = parse_args()
-    load_dotenv()
+    load_dotenv(dotenv_path='../.env')
 
     mode = args.mode
     verbose = args.verbose

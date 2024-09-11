@@ -19,7 +19,6 @@ slurm-*.out
 
 # General
 
-/JupyterNotebooks/
 /legacy_resnet_code/
 Sandbox.ipynb
 sandbox.py
@@ -35,22 +34,14 @@ sandbox.py
 /generation_demos/
 /ML_Experiments/configs/
 /ML_Experiments/test_configs/
+/.inference_save_files
 
 # Personal
 
-/Tasks.md
-/ResearchLeads.md
-/HyperparamSweep.md
-/Experiments.md
-/Poster.md
-/ProjectBackground.md
-/HJ_Meeting.md
-
-/ML_Experiments/
-/Notes/
-/Papers/
+/PERSONAL
 
 # Data
 
-/SyntheticData/
-/Experimental_Data/
+/SyntheticData_Eval/
+/SyntheticData_Train/
+/ExperimentalData/

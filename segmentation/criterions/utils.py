@@ -1,5 +1,6 @@
 from typing import Union, List, Tuple
 from enum import Enum
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -8,6 +9,8 @@ import torch.nn.functional as F
 from segmentation.data.labels import Labels
 
 import criterions
+
+from global_utils import load_json5
 
 def weight_dict_to_tensor(raw_weights : dict,
                           normalize : bool = False) -> torch.Tensor:
@@ -57,9 +60,11 @@ def _get_criterion(criterion_config : dict,
 
     return criterion
 
-def get_criterions(criterions_config : List[dict],
+def get_criterions(config : dict,
                    device : torch.device,
                    verbose : bool = False) -> List[dict]:
+    criterions_config = config['criterions']
+
     criterions : List[dict] = []
 
     for criterion_config in criterions_config:

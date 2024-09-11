@@ -53,9 +53,9 @@ def train_model(model : nn.Module,
                       global_step=epoch)
     writer.flush()
 
-def test_model(model : nn.Module, 
+def eval_model(model : nn.Module, 
                device : torch.device, 
-               test_loader : DataLoader, 
+               eval_loader : DataLoader, 
                criterions : List[dict],
                writer : SummaryWriter,
                epoch : int,
@@ -67,7 +67,7 @@ def test_model(model : nn.Module,
     running_count = 0
 
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(test_loader):
+        for batch_idx, (inputs, targets) in enumerate(eval_loader):
             model.eval()
 
             inputs, targets = inputs.to(device), targets.to(device)
@@ -79,9 +79,9 @@ def test_model(model : nn.Module,
 
             running_count += inputs.size(0)
 
-    test_losses = {name: loss/running_count for name, loss in running_losses.items()}
+    eval_losses = {name: loss/running_count for name, loss in running_losses.items()}
 
-    for name in test_losses:
+    for name in eval_losses:
         running_losses[name] /= running_count
 
         writer.add_scalar(f'loss/{name}',
@@ -89,11 +89,11 @@ def test_model(model : nn.Module,
                         global_step=epoch)
     writer.flush()
 
-    test_loss = 0.0
+    eval_loss = 0.0
     for criterion in criterions:
         weight = criterion['weight']
-        loss = test_losses[criterion['name']]
+        loss = eval_losses[criterion['name']]
 
-        test_loss += weight * loss
+        eval_loss += weight * loss
 
-    return test_loss
+    return eval_loss

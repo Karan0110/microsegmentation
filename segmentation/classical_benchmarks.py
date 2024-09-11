@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == '__main__':
     args = parse_args()
-    load_dotenv()
+    load_dotenv(dotenv_path='../env')
 
     verbose = args.verbose
 

@@ -129,11 +129,12 @@ class SyntheticDataset(Dataset):
 
         return image, mask
 
-def get_data_loaders(base_dir : Path, 
+def get_data_loaders(train_datasets_dir : Path, 
+                     eval_datasets_dir : Path, 
+                     dataset_name : str,
                      patch_size : int,
                      augmentation_config : dict,
                      color_to_label : dict,
-                     dataset_name : str,
                      train_test_split : float,
                      max_batches_per_train_epoch : Union[int, None],
                      max_batches_per_test : Union[int, None],
@@ -164,23 +165,21 @@ def get_data_loaders(base_dir : Path,
     else:
         max_batches = None
 
-    dataset_dir = base_dir / dataset_name
+    train_dataset_dir = train_datasets_dir / dataset_name
     if verbose:
-        print(f"\nTraining data path: {dataset_dir}")
-    dataset = SyntheticDataset(base_dir=dataset_dir, 
+        print(f"\nTraining data path: {train_dataset_dir}")
+    train_dataset = SyntheticDataset(base_dir=train_dataset_dir, 
                                transform=transform,
                                color_to_label=color_to_label,
                                max_batches=max_batches)
 
-    # Define the lengths for train and test splits
-    # We don't just use proportions in the lengths argument since it breaks when the sizes are small 
-    # (i.e. when running tests)
-    train_size = int(train_test_split * len(dataset))
-    test_size = len(dataset) - train_size
-
-    # Split the dataset into train and test sets
-    train_set, test_set = random_split(dataset=dataset, 
-                                       lengths=(train_size, test_size))
+    eval_dataset_dir = eval_datasets_dir / dataset_name
+    if verbose:
+        print(f"\nEval data path: {eval_dataset_dir}")
+    eval_dataset = SyntheticDataset(base_dir=eval_dataset_dir, 
+                               transform=transform,
+                               color_to_label=color_to_label,
+                               max_batches=max_batches)
 
 
     # Create DataLoaders
@@ -200,7 +199,7 @@ def get_data_loaders(base_dir : Path,
         if verbose:
             print(f"\nEnvironment variable NUM_WORKERS not set. \nUsing num_workers={num_workers}")
 
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-    return train_loader, test_loader
+    return train_loader, eval_loader
