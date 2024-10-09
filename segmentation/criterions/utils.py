@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from segmentation.data.labels import Labels
 
-import criterions
+import segmentation.criterions as criterions
 
 from global_utils import load_json5
 

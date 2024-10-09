@@ -24,9 +24,9 @@ from PIL import Image
 from fluorophore_simulation import get_mt_points, get_fluorophore_points, get_fluorophore_image, calculate_fluorophore_emission_per_second
 from microscope_simulation import get_psf_kernel, get_digital_signal, quantize_intensities
 from depoly_simulation import simulate_depoly
-from labelling import get_label
 
 from visualize import visualize
+from labelling import get_mask
 from global_utils.load_json5 import load_json5
 
 def generate(tubulaton_output_file_path : Path,
@@ -45,8 +45,8 @@ def generate(tubulaton_output_file_path : Path,
     #TODO - It shouldn't really cause issues if no MTs, even though this shouldn't happen if everything went right (But this is a temporary fix)
     if mt_points.shape[0] == 0:
         image = np.zeros((512,512))
-        label = np.zeros((512,512))
-        return image, label
+        mask = np.zeros((512,512))
+        return image, mask
     #TODO END
 
     unique_mt_ids = np.unique(mt_ids)
@@ -85,8 +85,8 @@ def generate(tubulaton_output_file_path : Path,
     #TODO - It shouldn't be the case no FPs - there are a fixed amount! (But this is a temporary fix)
     if fluorophore_points.shape[0] == 0:
         image = np.zeros((512,512))
-        label = np.zeros((512,512))
-        return image, label
+        mask = np.zeros((512,512))
+        return image, mask
     #TODO END
     
     #TODO - shouldn't be done like this. Look at the mesh .vtk files! (Do it properly!)
@@ -101,12 +101,12 @@ def generate(tubulaton_output_file_path : Path,
     z_slice=z_min*0.9 + z_max*0.1
 
     if verbose:
-        print("Generating label segmentation...")
-    label = get_label(mt_points=mt_points,
-                      z_slice=z_slice,
-                      config=config,
-                      bounding_box=(x_min, y_min, x_max, y_max),
-                      verbose=verbose)
+        print("Generating mask segmentation...")
+    mask = get_mask(mt_points=mt_points,
+                    z_slice=z_slice,
+                    config=config,
+                    bounding_box=(x_min, y_min, x_max, y_max),
+                    verbose=verbose)
         
     if verbose:
         print("Calculating fluorophore density over focal plane...")
@@ -163,21 +163,21 @@ def generate(tubulaton_output_file_path : Path,
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
-        axs[axs_index].imshow(label, cmap='gray') #type: ignore
+        axs[axs_index].imshow(mask, cmap='gray') #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Label Segmentation") #type: ignore
+        axs[axs_index].set_title("mask Segmentation") #type: ignore
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
-        colored_label = np.tile(label[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
-        colored_label[:, :, 0] = 1.
-        colored_label[:, :, 1] = 0.
-        colored_label[:, :, 2] = 0.
+        colored_mask = np.tile(mask[:, :, np.newaxis], (1, 1, 4)).astype(np.float32)
+        colored_mask[:, :, 0] = 1.
+        colored_mask[:, :, 1] = 0.
+        colored_mask[:, :, 2] = 0.
 
-        axs[axs_index].imshow(colored_label) #type: ignore
+        axs[axs_index].imshow(colored_mask) #type: ignore
         axs[axs_index].imshow(image, cmap='gray', alpha=0.5) #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Label Segmentation Overlaid") #type: ignore
+        axs[axs_index].set_title("mask Segmentation Overlaid") #type: ignore
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
@@ -186,7 +186,7 @@ def generate(tubulaton_output_file_path : Path,
     if verbose:
         print()
 
-    return image, label
+    return image, mask
 
 def is_file_name_valid_format(file_path : Path) -> bool:
     stem = file_path.stem
@@ -226,13 +226,10 @@ def parse_args() -> argparse.Namespace:
         description="Generate synthetic training data from tubulaton .vtk files."
     )
 
-    parser.add_argument('-od', '--output_dir', 
-                        type=Path, 
-                        help='Output Directory Path (Leave blank to use value in .env file)')
-
-    parser.add_argument('-i', '--input',
-                        type=Path,
-                        help="Input Path (Leave blank to use value in .env file)")
+    parser.add_argument('-n', '--name', 
+                        type=str, 
+                        required=True,
+                        help='Name of Dataset')
 
     parser.add_argument('-ids', '--ids',
                         type=str,
@@ -240,8 +237,8 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument('-c', '--config',
                         type=str,
-                        default='default',
-                        help='Name of config file without .json5 suffix (Leave blank to use default.json5)')
+                        required=True,
+                        help='Name of config file')
     
     parser.add_argument("--depoly",
                         type=float,
@@ -254,6 +251,10 @@ def parse_args() -> argparse.Namespace:
                                 - demo_headless:    Saves (partial) output of demos to files.
                                 - overwrite:        Overwrite any existing synthetic data in specified location
                                 - update:           Skip over any pre-existing synthetic data files""")
+
+    parser.add_argument('-i', '--input',
+                        type=Path,
+                        help="Input Path (Leave blank to use value in .env file)")
 
     parser.add_argument('-v', '--verbose', 
                         action='store_true', 
@@ -273,17 +274,16 @@ if __name__ == '__main__':
     mode = args.mode
     verbose = args.verbose
 
-    if args.output_dir is not None:
-        output_dir = args.output_dir
-    else:
-        output_dir = Path(os.environ["GENERATE_OUTPUT_DIR"])
+    dataset_name = args.name
+
+    output_dir = Path(os.environ["GENERATION_OUTPUT_DIR"]) / dataset_name
 
     if args.input is not None:
         tubulaton_output_path = args.input
     else:
         tubulaton_output_path = Path(os.environ["TUBULATON_OUTPUT_DIR"])
 
-    config_file_dir = Path(os.environ["GENERATE_CONFIG_DIR"])
+    config_file_dir = Path(os.environ["GENERATION_CONFIGS_DIR"])
     config_file_stem = args.config
     config_file_path = config_file_dir / f"{config_file_stem}.json5"
 
@@ -303,12 +303,6 @@ if __name__ == '__main__':
         depoly_proportion = args.depoly
     if verbose:
         print(f"Using depolymerization rate: {depoly_proportion}")
-
-    if not mode.startswith('demo'):
-        if output_dir is None:
-            raise ValueError(f"You must provide an output dir (-o) when not in demo mode!")
-        os.makedirs(output_dir / "Images/", exist_ok=True) 
-        os.makedirs(output_dir / "Labels/", exist_ok=True) 
 
     # Get the tubulaton output file paths
     tubulaton_output_file_paths : list
@@ -348,7 +342,15 @@ if __name__ == '__main__':
     else:
         file_path_iterator = tubulaton_output_file_paths
 
-    for tubulaton_output_file_path in file_path_iterator:
+    print(f"WARNING: Truncating the file path lists for testing. Must delete this part!!!")
+    file_path_iterator = file_path_iterator[:10]
+
+    train_eval_split = config['train_eval_split']
+    cutoff = int(len(file_path_iterator) * train_eval_split)
+    train_counter = 1
+    eval_counter = 1
+
+    for index, tubulaton_output_file_path in enumerate(file_path_iterator):
         block_start_time = time.time()
 
         file_id = extract_file_id(tubulaton_output_file_path)
@@ -357,41 +359,51 @@ if __name__ == '__main__':
             if output_dir is None:
                 raise ValueError("Output dir cannot be None when not in demo mode!")
 
-            image_file_name = f"image-{file_id}.png"
-            label_file_name = f"label-{file_id}.png"
+            if index < cutoff:
+                output_file_id = train_counter
+                train_counter += 1
+                subfolder_name = "Train"
+            else:
+                output_file_id = eval_counter
+                eval_counter += 1
+                subfolder_name = "Eval"
 
-            image_file_path = output_dir / 'Images' / image_file_name
-            label_file_path = output_dir / 'Labels' / label_file_name
+            image_file_name = f"image-{output_file_id}.png"
 
-            if mode == 'overwrite' or (not image_file_path.exists()) or (not label_file_path.exists()):
-                image, label = generate(tubulaton_output_file_path=tubulaton_output_file_path,
+            image_file_path = output_dir / subfolder_name / 'Images' / image_file_name
+            mask_file_path = output_dir / subfolder_name / 'Masks' / image_file_name
+
+            os.makedirs(image_file_path.parent, exist_ok=True)
+            os.makedirs(mask_file_path.parent, exist_ok=True)
+
+            if mode == 'overwrite' or (not image_file_path.exists()) or (not mask_file_path.exists()):
+                image, mask = generate(tubulaton_output_file_path=tubulaton_output_file_path,
                                         depoly_proportion=depoly_proportion,
                                         config=config,
                                         mode=mode,
                                         verbose=verbose)
 
-                image = image * 255. / image.max()
+                image = image / image.max() * 255.
                 image = Image.fromarray(image.astype(np.uint8), mode='L')
 
-                label = label * 255
-                label = Image.fromarray(label, mode='L')
+                mask = mask * 255
+                mask = Image.fromarray(mask, mode='L')
 
                 image.save(image_file_path)
-
-                label.save(label_file_path)
+                mask.save(mask_file_path)
 
                 if verbose:
-                    print(f"Saved data to {image_file_path} and {label_file_path}.")
+                    print(f"Saved data to {image_file_path} and {mask_file_path}.")
                     print()
             else:
                 if verbose:
-                    print(f"Image and label files for {tubulaton_output_file_path} already exist:")
+                    print(f"Image and mask files for {tubulaton_output_file_path} already exist:")
                     print(f"Image path: {image_file_path}")
-                    print(f"Label path: {label_file_path}")
+                    print(f"mask path: {mask_file_path}")
                     print(f"Skipping this tubulaton file.")
                     print()
         else:
-            image, label = generate(tubulaton_output_file_path=tubulaton_output_file_path,
+            image, mask = generate(tubulaton_output_file_path=tubulaton_output_file_path,
                                     depoly_proportion=depoly_proportion,
                                     config=config,
                                     mode=mode,
@@ -426,12 +438,3 @@ if __name__ == '__main__':
         print(f"\n\nTook {time_taken:.2f} seconds in total.")
         if len(tubulaton_output_file_paths) > 1:
             print(f"({time_taken / len(tubulaton_output_file_paths):.2f} seconds per .vtk file)")
-
-# Interactive demo:
-# python3 generate.py -i /Users/karan/MTData/tubulaton-run -c /Users/karan/microsegmentation/generation/generate_config.json5  --mode=demo_interactive -v --id=32
-
-# Headless demo:
-# python3 generate.py -i /Users/karan/MTData/tubulaton-run -c /Users/karan/microsegmentation/generation/generate_config.json5  --mode=demo_headless -v --num_files=5
-
-# Run on local computer
-# python3 generate.py -o /Users/karan/MTData/Synthetic_TEST -i /Users/karan/MTData/tubulaton-run -c /Users/karan/microsegmentation/generation/generate_config.json5  --mode=update -v 

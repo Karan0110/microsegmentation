@@ -16,6 +16,7 @@ slurm-*.out
 # Virtual environments
 .venv_segmentation/
 .venv_generation/
+.venv_evaluation/
 
 # General
 
@@ -24,10 +25,12 @@ Sandbox.ipynb
 sandbox.py
 *_DEPRECATED.py
 
-# .env
+.env
 
 # Program outputs
 
+/evaluation/metrics.csv
+/evaluation/metric_analysis
 /Models/
 /runs/
 /segmentation_demos/
@@ -42,6 +45,5 @@ sandbox.py
 
 # Data
 
-/SyntheticData_Eval/
-/SyntheticData_Train/
-/ExperimentalData/
+/Data/
+.Rproj.user

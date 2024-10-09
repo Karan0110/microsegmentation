@@ -27,7 +27,7 @@ def get_path_argument(cl_args : argparse.Namespace,
                                  ArgumentType=Path)
     
     if not path_argument.is_absolute():
-        base_dir = Path(os.environ['BASE_DIR'])
+        base_dir = Path(os.environ['PYTHONPATH'])
         path_argument = base_dir / path_argument
 
     return path_argument

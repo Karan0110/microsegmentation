@@ -3,7 +3,7 @@ from typing import Tuple
 
 import numpy as np
 
-def get_label(mt_points : np.ndarray,
+def get_mask(mt_points : np.ndarray,
               z_slice : float,
               config : dict,
               bounding_box : Tuple[int, int, int, int],

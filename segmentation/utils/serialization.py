@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from global_utils import load_json5, save_json5, instantiate_from_dict
-from criterions.utils import get_criterions
+from segmentation.criterions.utils import get_criterions
 
 import segmentation.models as models
 

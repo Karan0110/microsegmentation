@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     config_dir = Path(os.environ['SEGMENTATION_CONFIGS_PATH'])
     config_name = args.config if (args.config is not None) else model_name
-    config_path = Path(os.environ['BASE_DIR']) / config_dir / f"{config_name}.json5"
+    config_path = Path(os.environ['PYTHONPATH']) / config_dir / f"{config_name}.json5"
 
     log_dir = get_path_argument(cl_args=args,
                                 cl_arg_name='logdir',

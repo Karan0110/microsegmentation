@@ -17,7 +17,7 @@
         "dark_count_rate": 50,
         "digital_gain": 1.0,
 
-        "psf_kernel_size": 25,
+        "psf_kernel_size": 10,
 
         //TODO - what does this mean physically?
         "peak_intensity": 5.0,
