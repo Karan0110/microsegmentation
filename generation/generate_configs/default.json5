@@ -2,22 +2,24 @@
     "tubulaton_unit_in_meters": 8e-9,
 
     "fluorophore_batch_size": 50000,
-    "fluorophore_batch_spread": 2, //4
+    "fluorophore_batch_spread": 5, //4
 
-    "mt_label_point_radius": 10, //TODO testing
+    "mt_label_point_radius": 8, //TODO testing
 
     "microscope": {
         "numerical_aperature": 1.40,
         "medium_refraction_index": 1.518,
 
+        "z_slice_range": 1.3e-6, //Totally made up 1.5e-6
+        "z_slice_position": 0.85,
+
         //TODO - check with Ray
-        "z_slice_range": 2.0e-6, //Totally made up 1.5e-6
         "quantum_efficiency": 0.55,
         "gain": 1.0e4,
         "dark_count_rate": 50,
         "digital_gain": 1.0,
 
-        "psf_kernel_size": 15,
+        "psf_kernel_size": 5,
 
         //TODO - what does this mean physically?
         "peak_intensity": 5.0,
@@ -39,19 +41,19 @@
         "concentration": 1e-3,
 
         //TODO - check with biologist
-        "displacement_std": 35.0,
+        "displacement_std": 20.0,
 
         "excitation_wavelength": 514e-9,
         "emission_wavelength": 527e-9,
 
         "quantum_yield": 0.61,
 
-        //TODO - check with biologist (What even really is this?)
+        //TODO - check with biologist (What even is this?)
         "absorption_cross_section": 3e-20,
     },
 
     "microtubules": {
-        "depoly_displacement_std": 60.0, //70.0
+        "depoly_displacement_std": 150.0, //70.0
     },
 
     "depoly_proportion_distribution": {

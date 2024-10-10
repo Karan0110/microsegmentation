@@ -67,7 +67,6 @@
         "tan_Angle_mb": "0.839099631177",
     },
 
-    "positive_real_params": [],//["Angle_bundle", "Angle_cut", "Angle_mb_limite", "Angle_mb_trajectoire"],
-    "natural_number_params": [],//["D_bundle", "nb_microtubules_init", "nb_microtubules_init_2"],
-    "prob_params": [],//["proba_crossmicro_cut", "proba_crossmicro_shrink", "proba_detachement_par_step_par_microtubule", "proba_initialisation_area", "proba_initialisation_area_2", "proba_shrink"],
+    "time_steps": 10,
+    "dataset_name": "TEST",
 }

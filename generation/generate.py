@@ -51,6 +51,7 @@ def generate(tubulaton_output_file_path : Path,
 
     unique_mt_ids = np.unique(mt_ids)
 
+    # print("WARNING: Not showing the visualisation of tubulin (for testing)")
     if mode == 'demo_interactive':
         print("Showing visualization of tubulin (before depoly simulation)")
         visualize(mt_points)
@@ -61,6 +62,7 @@ def generate(tubulaton_output_file_path : Path,
                                                 config=config,
                                                 unique_mt_ids=unique_mt_ids,
                                                 proportion=depoly_proportion)
+    # print("WARNING: Not showing the visualisation of tubulin after depoly (for testing)")
     if mode == 'demo_interactive':
         print("Showing visualization of tubulin (after depoly simulation)")
         visualize(tubulin_points)
@@ -69,6 +71,8 @@ def generate(tubulaton_output_file_path : Path,
         print("Simulating positions of fluorophores...")
     fluorophore_points = get_fluorophore_points(tubulin_points=tubulin_points,
                                                 config=config)
+
+    # print("WARNING: Not showing the visualisation of FPs (for testing)")
     if mode == 'demo_interactive':
         print("Visualizing fluorophore points...")
         visualize(fluorophore_points,
@@ -97,8 +101,8 @@ def generate(tubulaton_output_file_path : Path,
     y_min = fluorophore_points[:, 1].min()
     y_max = fluorophore_points[:, 1].max()
 
-    # TODO - make z_slice tunable (No magic numbers!)
-    z_slice=z_min*0.9 + z_max*0.1
+    z_slice_position = config['microscope']['z_slice_position']
+    z_slice=z_min*z_slice_position + z_max*(1-z_slice_position)
 
     if verbose:
         print("Generating mask segmentation...")
@@ -165,7 +169,7 @@ def generate(tubulaton_output_file_path : Path,
     if mode.startswith('demo'):
         axs[axs_index].imshow(mask, cmap='gray') #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("mask Segmentation") #type: ignore
+        axs[axs_index].set_title("Mask Segmentation") #type: ignore
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
@@ -177,7 +181,7 @@ def generate(tubulaton_output_file_path : Path,
         axs[axs_index].imshow(colored_mask) #type: ignore
         axs[axs_index].imshow(image, cmap='gray', alpha=0.5) #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("mask Segmentation Overlaid") #type: ignore
+        axs[axs_index].set_title("Mask Segmentation Overlaid") #type: ignore
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
@@ -342,8 +346,8 @@ if __name__ == '__main__':
     else:
         file_path_iterator = tubulaton_output_file_paths
 
-    print(f"WARNING: Truncating the file path lists for testing. Must delete this part!!!")
-    file_path_iterator = file_path_iterator[:10]
+    # print(f"WARNING: Truncating the file path lists for testing. Must delete this part!!!")
+    # file_path_iterator = file_path_iterator[:10]
 
     train_eval_split = config['train_eval_split']
     cutoff = int(len(file_path_iterator) * train_eval_split)

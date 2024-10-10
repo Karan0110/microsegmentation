@@ -38,7 +38,7 @@ def display_informative_segmentation(original_image: np.ndarray, mask : Optional
     axs[0, 0].axis('off')
     
     # Segmentation
-    axs[0, 1].imshow(segmentation, cmap='viridis')
+    axs[0, 1].imshow(segmentation, cmap='viridis', vmax=0.3, vmin=0.0)
     axs[0, 1].set_title('Segmentation')
     axs[0, 1].axis('off')
     
@@ -52,7 +52,10 @@ def display_informative_segmentation(original_image: np.ndarray, mask : Optional
         axs[1, 1].imshow(mask, cmap='gray')
         axs[1, 1].set_title('Ground Truth')
     axs[1, 1].axis('off')
-    
+
+    # print("WARNING: REMOVE THIS TODO TESTING!!!")
+    # axs[1,1].hist(x=segmentation.flatten(), log=True)
+
     # Adjust layout for plots
     plt.tight_layout()
     
@@ -116,7 +119,7 @@ if __name__ == '__main__':
                                     cl_arg_name='savedir',
                                     env_var_name='INFERENCE_SAVE_DIR')
 
-    image_file_path : Path = Path(os.environ['DATA_DIR']) / args.dataset / args.input
+    image_file_path : Path = Path(os.environ['DATA_DIR']) / args.dataset / "Images" / f"{args.input}.png"
     if not image_file_path.is_absolute():
         image_file_path = Path(os.environ['PYTHONPATH']) / image_file_path
     
