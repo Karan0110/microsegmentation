@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     time_steps = tubulaton_config['time_steps']
     old_path = output_dir / "tubulaton-run" / f"tubulaton-{sample_name}_{time_steps}.vtk"
-    new_path = output_dir / f"tubulaton-{sample_name}"
+    new_path = output_dir / f"tubulaton-{sample_name}.vtk"
     if verbose:
         print(f"\nMoving output from {old_path} to {new_path}")
     shutil.move(old_path, new_path)
