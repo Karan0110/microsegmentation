@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     model_dir = get_path_argument(cl_args=args,
                                   cl_arg_name='modeldir',
-                                  env_var_name='MODELS_PATH')
+                                  env_var_name='MODELS_DIR')
     model_dir = model_dir / model_name
 
     num_workers : Optional[int]
@@ -103,22 +103,18 @@ if __name__ == '__main__':
     initial_weight_model_name : str
     initial_weight_model_name = args.weights
 
-    config_dir = Path(os.environ['SEGMENTATION_CONFIGS_PATH'])
+    config_dir = Path(os.environ['SEGMENTATION_CONFIGS_DIR'])
     config_name = args.config if (args.config is not None) else model_name
     config_path = Path(os.environ['PYTHONPATH']) / config_dir / f"{config_name}.json5"
 
     log_dir = get_path_argument(cl_args=args,
                                 cl_arg_name='logdir',
-                                env_var_name='SEGMENTATION_TRAINING_LOG_PATH')
+                                env_var_name='TRAINING_LOG_DIR')
     log_dir = log_dir / model_name
 
-    train_datasets_dir = get_path_argument(cl_args=args,
+    synthetic_datasets_dir = get_path_argument(cl_args=args,
                                     cl_arg_name='traindir',
-                                    env_var_name='TRAIN_DATA_PATH')
-
-    eval_datasets_dir = get_path_argument(cl_args=args,
-                                    cl_arg_name='evaldir',
-                                    env_var_name='EVAL_DATA_PATH')
+                                    env_var_name='GENERATION_OUTPUT_DIR')
 
     # Set up device
     # --------------
@@ -156,6 +152,10 @@ if __name__ == '__main__':
     if verbose:
         print(f"\nConfig path: {config_path}")
 
+    data_dir = synthetic_datasets_dir / config['data']['dataset_name']  
+    train_data_dir = data_dir / "Train"
+    eval_data_dir = data_dir / "Eval"
+
     model : nn.Module
     optimizer : torch.optim.Optimizer
     criterions : List[dict]
@@ -190,8 +190,8 @@ if __name__ == '__main__':
     if verbose:
         print(f"\nPatch size: {patch_size}")
 
-    train_loader, eval_loader = get_data_loaders(train_datasets_dir=train_datasets_dir,
-                                                 eval_datasets_dir=eval_datasets_dir,
+    train_loader, eval_loader = get_data_loaders(train_data_dir=train_data_dir,
+                                                 eval_data_dir=eval_data_dir,
                                                 patch_size=patch_size,
                                                  augmentation_config=config['augmentation'],
                                                  **data_config,

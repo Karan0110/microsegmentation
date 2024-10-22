@@ -48,7 +48,7 @@ class SyntheticDataset(Dataset):
         images_index_range = self._get_index_range(dir_path=base_dir / 'Images',
                                                    file_name_stem="image")
         masks_index_range = self._get_index_range(dir_path=base_dir / 'Masks',
-                                                   file_name_stem="mask")
+                                                   file_name_stem="image")
         if images_index_range != masks_index_range:
             raise ValueError(f"""Invalid file structure for data. Different index ranges for Images and masks:
                                  Images: {images_index_range}
@@ -109,7 +109,7 @@ class SyntheticDataset(Dataset):
         image = (np.array(image) / 255.).astype(np.float32)
         assert len(image.shape) == 2
         
-        mask_path = self.base_dir / f'Masks/mask-{index}.png'
+        mask_path = self.base_dir / f'Masks/image-{index}.png'
         mask = Image.open(mask_path)
         mask = np.array(mask)
 
@@ -129,13 +129,12 @@ class SyntheticDataset(Dataset):
 
         return image, mask
 
-def get_data_loaders(train_datasets_dir : Path, 
-                     eval_datasets_dir : Path, 
+def get_data_loaders(train_data_dir : Path, 
+                     eval_data_dir : Path, 
                      dataset_name : str,
                      patch_size : int,
                      augmentation_config : dict,
                      color_to_label : dict,
-                     train_test_split : float,
                      max_batches_per_train_epoch : Union[int, None],
                      max_batches_per_test : Union[int, None],
                      batch_size : int,
@@ -154,6 +153,7 @@ def get_data_loaders(train_datasets_dir : Path,
         transform_list.append(transform)
 
     # transform_list.append(A.Normalize(mean=(0.5,), std=(0.5,), max_pixel_value=255.0))
+    transform_list.append(A.PadIfNeeded(min_height=patch_size, min_width=patch_size, border_mode=0, value=0))
     transform_list.append(A.RandomCrop(height=patch_size, width=patch_size))
     transform_list.append(ToTensorV2())
 
@@ -165,18 +165,16 @@ def get_data_loaders(train_datasets_dir : Path,
     else:
         max_batches = None
 
-    train_dataset_dir = train_datasets_dir / dataset_name
     if verbose:
-        print(f"\nTraining data path: {train_dataset_dir}")
-    train_dataset = SyntheticDataset(base_dir=train_dataset_dir, 
+        print(f"\nTraining data path: {train_data_dir}")
+    train_dataset = SyntheticDataset(base_dir=train_data_dir, 
                                transform=transform,
                                color_to_label=color_to_label,
                                max_batches=max_batches)
 
-    eval_dataset_dir = eval_datasets_dir / dataset_name
     if verbose:
-        print(f"\nEval data path: {eval_dataset_dir}")
-    eval_dataset = SyntheticDataset(base_dir=eval_dataset_dir, 
+        print(f"\nEval data path: {eval_data_dir}")
+    eval_dataset = SyntheticDataset(base_dir=eval_data_dir, 
                                transform=transform,
                                color_to_label=color_to_label,
                                max_batches=max_batches)

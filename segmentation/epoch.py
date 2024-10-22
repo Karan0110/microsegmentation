@@ -27,6 +27,17 @@ def train_model(model : nn.Module,
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(device), targets.to(device)
 
+        # TODO TESTING (Check what we are finally feeding into model is sensible)
+        # image = inputs.to('cpu').numpy() 
+        # mask = targets.to('cpu').numpy() 
+
+        # fig, axes = plt.subplots(1,2)
+        # axes[0].imshow(image.reshape((128,128)))
+        # axes[1].imshow(mask.reshape((128,128)))
+        # plt.show()
+        # exit(0)
+        # TODO TESTING 
+
         model.train()
 
         optimizer.zero_grad()

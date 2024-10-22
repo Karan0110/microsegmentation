@@ -12,11 +12,10 @@
         },
     },
     data: {
-        train_test_split: 0.8,
-        dataset_name: "HighRes",
+        dataset_name: "level_1",
         batch_size: 1,
-        max_batches_per_train_epoch: 500,
-        max_batches_per_test: 50,
+        max_batches_per_train_epoch: 500, //TODO TESTING
+        max_batches_per_test: 50, //TODO TESTING
         color_to_label: {
             "0": "DEPOLYMERIZED",
             "255": "POLYMERIZED",
