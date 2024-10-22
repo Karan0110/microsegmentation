@@ -341,7 +341,8 @@ if __name__ == '__main__':
     random.seed(1000)
 
     args = parse_args()
-    load_dotenv(dotenv_path='../.env')
+    dotenv_path = Path(os.environ['PYTHONPATH']) / '.env'
+    load_dotenv(dotenv_path=dotenv_path)
 
     mode = args.mode
     show_3d = args.show_3d

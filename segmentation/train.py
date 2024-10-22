@@ -80,7 +80,8 @@ if __name__ == '__main__':
     # Handle CL arguments
     # --------------------
 
-    load_dotenv(dotenv_path='../.env')
+    dotenv_path = Path(os.environ['PYTHONPATH']) / '.env'
+    load_dotenv(dotenv_path=dotenv_path)
     args = get_command_line_args()
 
     verbose : bool

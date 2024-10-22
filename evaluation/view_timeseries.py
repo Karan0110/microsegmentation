@@ -73,7 +73,8 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == '__main__':
     args = parse_args()
-    load_dotenv(dotenv_path='../.env')
+    dotenv_path = Path(os.environ['PYTHONPATH']) / '.env'
+    load_dotenv(dotenv_path=dotenv_path)
 
     verbose = args.verbose
     overwrite_save_file = args.overwrite

@@ -31,7 +31,8 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == '__main__':
-    load_dotenv('../.env')
+    dotenv_path = Path(os.environ['PYTHONPATH']) / '.env'
+    load_dotenv(dotenv_path)
     args = parse_args()    
 
     verbose = args.verbose
