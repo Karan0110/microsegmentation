@@ -10,6 +10,7 @@ from random import shuffle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import tifffile
 
 from skimage.filters import threshold_otsu
 
@@ -20,43 +21,10 @@ from segmentation.models.inference import query_inference
 from segmentation.utils.serialization import load_model
 
 from global_utils.arguments import get_path_argument
+from global_utils.parse_number_or_range import parse_number_or_range
 from global_utils import load_grayscale_image
 
 from evaluate import calculate_metrics
-
-def display_informative_segmentation(original_image: np.ndarray, mask : Optional[np.ndarray], segmentation: np.ndarray):
-    # Calculate the necessary information
-    threshold = threshold_otsu(segmentation.flatten())
-    hard_segmentation_otsu = (segmentation > threshold).astype(np.float32)
-    
-    # Set up figure
-    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
-    
-    # Original image
-    axs[0, 0].imshow(original_image, cmap='gray')
-    axs[0, 0].set_title('Original Image')
-    axs[0, 0].axis('off')
-    
-    # Segmentation
-    axs[0, 1].imshow(segmentation, cmap='viridis', vmax=0.3, vmin=0.0)
-    axs[0, 1].set_title('Segmentation')
-    axs[0, 1].axis('off')
-    
-    # Hard segmentation - Otsu
-    axs[1, 0].imshow(hard_segmentation_otsu, cmap='gray')
-    axs[1, 0].set_title('Hard Segmentation (Otsu)')
-    axs[1, 0].axis('off')
-    
-    # Ground Truth Mask
-    if mask is not None:
-        axs[1, 1].imshow(mask, cmap='gray')
-        axs[1, 1].set_title('Ground Truth')
-    axs[1, 1].axis('off')
-
-    # Adjust layout for plots
-    plt.tight_layout()
-    
-    plt.show()
 
 def parse_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -64,15 +32,19 @@ def parse_args() -> argparse.Namespace:
         description="Show segmentation of specified image",
     )
 
-    parser.add_argument('-dn', '--dataset', 
-                        type=str, 
-                        required=True,
-                        help='Name of dataset')
-
     parser.add_argument('-i', '--input', 
-                        type=str, 
+                        type=Path, 
                         required=True,
-                        help='Name of image to segment')
+                        help='Path to lsm file')
+
+    parser.add_argument('-z', '--zstack',
+                        type=int,
+                        required=True,
+                        help="Z slice position")
+
+    parser.add_argument('-t', '--times',
+                        type=str,
+                        help="Time steps to show")
 
     parser.add_argument('-md', '--modeldir', 
                         type=Path, 
@@ -113,17 +85,19 @@ if __name__ == '__main__':
                                     env_var_name='MODELS_PATH')
 
     save_dir = get_path_argument(cl_args=args,
-                                    cl_arg_name='savedir',
-                                    env_var_name='INFERENCE_SAVE_DIR')
+                                 cl_arg_name='savedir',
+                                 env_var_name='INFERENCE_SAVE_DIR')
 
-    image_file_path : Path = Path(os.environ['DATA_DIR']) / args.dataset / "Images" / f"{args.input}.png"
-    if not image_file_path.is_absolute():
-        image_file_path = Path(os.environ['PYTHONPATH']) / image_file_path
+    lsm_file_path : Path = args.input
+    with tifffile.TiffFile(lsm_file_path) as tif:
+        lsm_data = tif.asarray()
     
-    mask_file_path = image_file_path.parent.parent / "Masks" / image_file_path.name
-
+    metadata = tif.lsm_metadata
+    if metadata is None:
+        raise ValueError()
+    num_time_steps = metadata['DimensionTime']
+    
     model_name = args.name
-
     model_dir = models_path / model_name
 
     if verbose:
@@ -139,7 +113,23 @@ if __name__ == '__main__':
                         model_dir=model_dir,
                         verbose=verbose)
 
-    segmentation = query_inference(model=model,
+    z_stack = args.zstack
+    image_file_names = [f"frame_{time_step}_{z_stack}.png" for time_step in range(num_time_steps)]
+
+    assert len(image_file_names) == num_time_steps
+
+    raw_time_steps = args.times
+    time_steps = parse_number_or_range(raw_time_steps) if raw_time_steps is not None else range(num_time_steps)
+    assert 0 <= min(time_steps) <= max(time_steps) <= num_time_steps
+
+    fig, axs = plt.subplots(len(time_steps), 2, figsize=(10, 2 * num_time_steps))
+    print(axs.shape)
+
+    for time_step in time_steps:
+        image_file_name = image_file_names[time_step]
+        image_file_path = lsm_file_path.parent / f'PNG_{lsm_file_path.stem}' / image_file_name
+
+        segmentation = query_inference(model=model,
                                     device=device,
                                     image_file_path=image_file_path,
                                     model_file_path=model_file_path,
@@ -147,16 +137,16 @@ if __name__ == '__main__':
                                     save_dir=save_dir,
                                     overwrite_save_file=overwrite_save_file,
                                     verbose=verbose)
-    
-    original_image = load_grayscale_image(image_file_path)
-    mask = load_grayscale_image(mask_file_path) if mask_file_path.exists() else None
-    
-    # Show metrics in stdout
-    if mask is not None:
-        metrics_dict = calculate_metrics(segmentation.flatten(), mask.flatten())
-        print("\n" + ('#' * 30) + '\n')
-        for key, value in metrics_dict.items():
-            print(f"{key}: {value:.3f}")
-        print("\n" + ('#' * 30) + '\n')
+        
+        original_image = load_grayscale_image(image_file_path)
 
-    display_informative_segmentation(original_image, mask, segmentation)
+        ax_index = time_step - min(time_steps)
+
+        axs[ax_index, 0].imshow(original_image, cmap='viridis', vmax=0.5)#,vmin=0.0, vmax=1.0)
+        axs[ax_index, 0].axis('off')
+
+        axs[ax_index, 1].imshow(segmentation, cmap='viridis', vmax=0.5)#,vmin=0.0, vmax=1.0)
+        axs[ax_index, 1].axis('off')
+
+    plt.show()
+        

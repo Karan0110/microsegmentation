@@ -77,6 +77,14 @@ def calculate_metrics(probs_flat: np.ndarray, targets_flat: np.ndarray) -> Dict[
 
         metrics[f"dice_{threshold_name}"] = dice_score
 
+    # 7. BCE (with 1:1 and 9:1 weightings)
+    weights = [0.5, 0.9] 
+    for alpha in weights:
+        label = f"Weighted BCE ({int(1/(1-alpha))} : 1)"
+        bce = -(alpha * mask * np.log(segmentation) + (1. - alpha) * (1.-mask) * np.log(1.-segmentation)).mean()
+
+        metrics[label] = bce
+
     return metrics
 
 def get_hard_dice_score(probs_flat : np.ndarray, targets_flat : np.ndarray, threshold : float) -> float:
@@ -103,10 +111,10 @@ def update_metrics_df(metrics_df : pd.DataFrame,
     metrics = calculate_metrics(segmentation.flatten(), mask.flatten())
 
     if ('model_name' in metrics_df) and ('dataset_name' in metrics_df) and ('image_name' in metrics_df) and \
-        (mask := ((metrics_df['model_name'] == model_name) & (metrics_df['dataset_name'] == dataset_name) & (metrics_df['image_name'] == image_name))).any():
+        (df_mask := ((metrics_df['model_name'] == model_name) & (metrics_df['dataset_name'] == dataset_name) & (metrics_df['image_name'] == image_name))).any():
 
         for col, value in metrics.items():
-            metrics_df.loc[mask, col] =  value
+            metrics_df.loc[df_mask, col] =  value
     else:
         expanded_metrics : Dict = metrics.copy()
         expanded_metrics['model_name'] = model_name

@@ -9,8 +9,22 @@ from scipy.constants import Planck, speed_of_light
 from vtkmodules.vtkIOLegacy import vtkPolyDataReader
 from vtkmodules.vtkCommonDataModel import vtkPolyData
 
+def rotate_x(points: np.ndarray, angle: float) -> np.ndarray:
+    cos_theta = np.cos(angle)
+    sin_theta = np.sin(angle)
+    rotation_matrix = np.array([
+        [1, 0, 0],
+        [0, cos_theta, -sin_theta],
+        [0, sin_theta, cos_theta]
+    ])
+    
+    # Apply the rotation matrix to the points
+    rotated_points = points @ rotation_matrix.T
+    return rotated_points
+
 def get_mt_points(file_path : Path,
-                  config : dict) -> Tuple[np.ndarray, np.ndarray]:
+                  config : dict,
+                  verbose : bool) -> Tuple[np.ndarray, np.ndarray]:
     reader = vtkPolyDataReader()
     reader.SetFileName(str(file_path))
     reader.Update()
@@ -25,14 +39,25 @@ def get_mt_points(file_path : Path,
         x, y, z = points.GetPoint(i)
         points_array[i] = [float(x), float(y), float(z)]
 
-    # TODO - this uses the "identite" attribute, which will be deprecated soon
-    # This could cause errors if we run tubulaton on a fixed version
     mt_ids_array = polydata.GetPointData().GetArray("identite")
 
     if mt_ids_array is None:
         return np.zeros((0, 3)), np.zeros((0,), dtype=int)
 
     mt_ids = np.array([mt_ids_array.GetValue(i) for i in range(mt_ids_array.GetNumberOfTuples())])
+    
+    if config['apply_random_rotation']:
+        # theta = np.pi
+        # print("WARNING: Using non-random theta value for rotation!")
+        theta = np.random.random() * (2*np.pi)
+        if verbose:
+            print(f"Rotating .vtk file by {theta} radians")
+        points_array = rotate_x(points_array, theta)
+
+    # Discard all NaN points
+    nan_mask = np.isnan(points_array).any(axis=1)
+    points_array = points_array[~nan_mask]
+    mt_ids = mt_ids[~nan_mask]
     
     return points_array, mt_ids
 
@@ -69,7 +94,6 @@ def get_fluorophore_points(tubulin_points : np.ndarray,
 
     volume = x_dim * y_dim * z_dim * (tubulaton_unit_in_meters ** 3)
     fluorophores_in_moles = volume * (fluorophore_concentration * (10**3))
-    print(f"Number of FPs: {fluorophores_in_moles * 6.0e23}")
 
     fluorophore_batch_size = config['fluorophore_batch_size']
     num_fluorophores = int(fluorophores_in_moles * 6.0e23 / fluorophore_batch_size)
@@ -123,7 +147,7 @@ def get_fluorophore_image(fluorophore_points : np.ndarray,
             temp_y = min(new_y+fluorophore_batch_spread, int(y_max - y_min))
             temp_x = min(new_x+fluorophore_batch_spread, int(x_max - x_min))
             image[new_y:temp_y, new_x:temp_x] = float(fluorophore_batch_size) / (fluorophore_batch_spread ** 2)
-    if verbose:
-        print(f"{hits} fluorophores found in the focal plane.")
+    # if verbose:
+    #     print(f"{hits} fluorophores found in the focal plane.")
 
     return image

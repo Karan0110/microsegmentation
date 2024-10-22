@@ -2,8 +2,8 @@
     "tubulaton_parameters": {
         "num_input_vtk": "2",
 
-        "nom_input_vtk": "Cylinder_5000_EqualNucleation.vtk",
-        "nom_input_vtk_2": "Sphere_inflence.vtk",
+        "nom_input_vtk": "Cylinder_10000_EqualNucleation.vtk",
+        "nom_input_vtk_2": "Sphere_Rad500_500_500_Xpos3625_Mesh2000.vtk",
         "nom_input_vtk_ref": "Cylinder_10000_EqualNucleation.vtk",
         "nom_input_vtk_ref_2": "Cylinder_10000_EqualNucleation.vtk",
 
@@ -15,16 +15,16 @@
         
         //Any natural number
         "D_bundle": "49",
-        "nb_microtubules_init": "30",
-        "nb_microtubules_init_2": "30",
+        "nb_microtubules_init": "30", //30
+        "nb_microtubules_init_2": "30", //30
 
         //Any probability
         "proba_crossmicro_cut": "0.005",
         "proba_crossmicro_shrink": "0.001",
         "proba_detachement_par_step_par_microtubule": "0.001",
-        "proba_initialisation_area": "0.0003", //0.002
-        "proba_initialisation_area_2": "0.0003", //0.002
-        "proba_shrink": "0.00001", //0.0001
+        "proba_initialisation_area": "0.002", //0.002
+        "proba_initialisation_area_2": "0.001", //0.002
+        "proba_shrink": "0.0001", //0.0001
 
         "nom_folder_input_vtk": "",
         "nom_folder_output_vtk": "",
@@ -50,8 +50,8 @@
         "nom_rapport": "NucleusInsideCyl.txt",
         "part_alea_alea": "1",
         "part_alea_fixe": "39",
-        "part_influence_influence": "1", //0
-        "part_influence_normale": "0",   //1
+        "part_influence_influence": "0.003", //0
+        "part_influence_normale": "1",   //This is a 0/1 flag - keep it as 1
         "proba_rescue": "0",
         "proba_tocut": "0",
         "save_events": "10000",
@@ -60,6 +60,7 @@
         "tan_Angle_mb": "0.839099631177",
     },
 
-    "time_steps": 1000,
+    "time_steps": 1000, //1000
     "dataset_name": "TEST",
 }
+

@@ -17,7 +17,6 @@ def visualize(points : np.ndarray,
         indices = random.sample(range(num_points), sample_size)
         points = points[indices]
 
-
     # Separate the points into x, y, and z coordinates
     x = points[:, 0]
     y = points[:, 1]

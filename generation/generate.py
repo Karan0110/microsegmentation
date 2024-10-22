@@ -1,9 +1,5 @@
-# Command line arguments
-# output_dir                 : Location to save data
-# sample_name                : A unique ID for the data sample
-# tubulaton_output_file_path : Path of tubulaton .vtk output file
-
 import os
+import itertools
 import sys
 import json5
 import time
@@ -27,20 +23,98 @@ from depoly_simulation import simulate_depoly
 
 from visualize import visualize
 from labelling import get_mask
+
 from global_utils.load_json5 import load_json5
+from global_utils.parse_number_or_range import parse_number_or_range
+
+def pad_and_tile_sample(arr, tile_size):
+    """
+    Pads the array to make its dimensions a multiple of tile_size, then breaks it
+    into tiles of size tile_size x tile_size and samples a value uniformly at random
+    from each tile.
+    
+    Args:
+    - arr: NumPy array of shape (H, W)
+    - tile_size: Size of the tiles (default is 10)
+    
+    Returns:
+    - A new array where each element is a randomly sampled value from the corresponding tile.
+    """
+    # Get original dimensions
+    H, W = arr.shape
+
+    # Calculate padding needed to make H and W multiples of tile_size
+    pad_h = (tile_size - (H % tile_size)) % tile_size
+    pad_w = (tile_size - (W % tile_size)) % tile_size
+
+    # Pad the array with zeros
+    arr_padded = np.pad(arr, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=0)
+
+    # Get the new padded dimensions
+    H_padded, W_padded = arr_padded.shape
+
+    # Reshape the array to get tiles of tile_size x tile_size
+    arr_reshaped = arr_padded.reshape(H_padded // tile_size, tile_size, W_padded // tile_size, tile_size)
+
+    # Initialize the output array to store the sampled values
+    result = np.zeros((H_padded // tile_size, W_padded // tile_size))
+
+    # Sample uniformly from each tile
+    for i in range(H_padded // tile_size):
+        for j in range(W_padded // tile_size):
+            tile = arr_reshaped[i, :, j, :]  # Extract the tile (10x10 sub-array)
+            tile_flat = tile.flatten()  # Flatten the tile to a 1D array
+            result[i, j] = np.random.choice(tile_flat)  # Randomly sample one value from the tile
+
+    return result
+
+def pad_and_tile_aggregate(arr, 
+                           tile_size, 
+                           agg_func):
+    """
+    Pads the array to make its dimensions a multiple of tile_size, then breaks it
+    into tiles of size tile_size x tile_size and applies the aggregation function agg_func.
+    
+    Args:
+    - arr: NumPy array of shape (H, W)
+    - tile_size: Size of the tiles (default is 10)
+    - agg_func: Aggregation function (e.g., np.max, np.mean)
+    
+    Returns:
+    - A new array where each element is the result of applying agg_func to the corresponding tile.
+    """
+    # Get original dimensions
+    H, W = arr.shape
+
+    # Calculate padding needed to make H and W multiples of tile_size
+    pad_h = (tile_size - (H % tile_size)) % tile_size
+    pad_w = (tile_size - (W % tile_size)) % tile_size
+
+    # Pad the array with zeros
+    arr_padded = np.pad(arr, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=0)
+
+    # Get the new padded dimensions
+    H_padded, W_padded = arr_padded.shape
+
+    # Reshape the array to get tiles of tile_size x tile_size
+    arr_reshaped = arr_padded.reshape(H_padded // tile_size, tile_size, W_padded // tile_size, tile_size)
+
+    # Apply the aggregation function (agg_func) on each tile
+    arr_aggregated = agg_func(arr_reshaped, axis=(1, 3))
+
+    return arr_aggregated
 
 def generate(tubulaton_output_file_path : Path,
              config : dict,
              depoly_proportion : float,
              mode : str,
+             show_3d : bool,
              verbose : bool) -> Tuple[np.ndarray, np.ndarray]:
-    if verbose:
-        print()
-
     if verbose:
         print(f"Loading MT points from {tubulaton_output_file_path} to numpy array...")
     mt_points, mt_ids = get_mt_points(file_path=tubulaton_output_file_path,
-                                      config=config)
+                                      config=config,
+                                      verbose=verbose)
 
     #TODO - It shouldn't really cause issues if no MTs, even though this shouldn't happen if everything went right (But this is a temporary fix)
     if mt_points.shape[0] == 0:
@@ -51,8 +125,7 @@ def generate(tubulaton_output_file_path : Path,
 
     unique_mt_ids = np.unique(mt_ids)
 
-    # print("WARNING: Not showing the visualisation of tubulin (for testing)")
-    if mode == 'demo_interactive':
+    if show_3d and mode == 'demo_interactive':
         print("Showing visualization of tubulin (before depoly simulation)")
         visualize(mt_points)
     
@@ -62,25 +135,21 @@ def generate(tubulaton_output_file_path : Path,
                                                 config=config,
                                                 unique_mt_ids=unique_mt_ids,
                                                 proportion=depoly_proportion)
-    # print("WARNING: Not showing the visualisation of tubulin after depoly (for testing)")
-    if mode == 'demo_interactive':
+    if show_3d and mode == 'demo_interactive':
         print("Showing visualization of tubulin (after depoly simulation)")
         visualize(tubulin_points)
 
-    if verbose:
-        print("Simulating positions of fluorophores...")
     fluorophore_points = get_fluorophore_points(tubulin_points=tubulin_points,
                                                 config=config)
 
-    # print("WARNING: Not showing the visualisation of FPs (for testing)")
-    if mode == 'demo_interactive':
+    if show_3d and mode == 'demo_interactive':
         print("Visualizing fluorophore points...")
         visualize(fluorophore_points,
                   colors='yellow',
                   background_color='black')
 
     if mode.startswith('demo'):
-        plot_rows = 3
+        plot_rows = 2
         plot_cols = 2
         fig, axs = plt.subplots(plot_rows, plot_cols, figsize=(10 * plot_cols, 2 * plot_rows))
         axs = axs.flatten()
@@ -93,32 +162,43 @@ def generate(tubulaton_output_file_path : Path,
         return image, mask
     #TODO END
     
-    #TODO - shouldn't be done like this. Look at the mesh .vtk files! (Do it properly!)
-    z_min = fluorophore_points[:, 2].min()
-    z_max = fluorophore_points[:, 2].max()
     x_min = fluorophore_points[:, 0].min()
-    x_max = fluorophore_points[:, 0].max()
     y_min = fluorophore_points[:, 1].min()
+    z_min = fluorophore_points[:, 2].min()
+
+    x_max = fluorophore_points[:, 0].max()
     y_max = fluorophore_points[:, 1].max()
+    z_max = fluorophore_points[:, 2].max()
 
     z_slice_position = config['microscope']['z_slice_position']
     z_slice=z_min*z_slice_position + z_max*(1-z_slice_position)
 
-    if verbose:
-        print("Generating mask segmentation...")
     mask = get_mask(mt_points=mt_points,
                     z_slice=z_slice,
                     config=config,
                     bounding_box=(x_min, y_min, x_max, y_max),
                     verbose=verbose)
         
-    if verbose:
-        print("Calculating fluorophore density over focal plane...")
     fluorophore_image = get_fluorophore_image(fluorophore_points=fluorophore_points,
                                               config=config,
                                               bounding_box=(x_min, y_min, x_max, y_max),
                                               z_slice=z_slice,
                                               verbose=verbose)
+
+    # Crop the image/mask
+
+    x_frame_size = config['x_frame_size']
+    y_frame_size = config['y_frame_size']
+    H, W = fluorophore_image.shape
+    assert (H,W) == mask.shape
+
+    new_max_i = int(y_frame_size * H)
+    new_min_i = int(1. - y_frame_size * H)
+    new_max_j = int(x_frame_size * W)
+    new_min_j = int(1. - x_frame_size * W)
+
+    fluorophore_image = fluorophore_image[new_min_i:new_max_i, new_min_j:new_max_j]
+    mask = mask[new_min_i:new_max_i, new_min_j:new_max_j]
     
     if mode.startswith('demo'):
         axs[axs_index].imshow(fluorophore_image, cmap='gray') #type: ignore
@@ -126,44 +206,39 @@ def generate(tubulaton_output_file_path : Path,
         axs[axs_index].set_title("Fluorophore image") #type: ignore
         axs_index += 1 #type: ignore
 
-    if verbose:
-        print("Calculating fluorophore photon emission rate...")
     fluorophore_emission_per_second  = calculate_fluorophore_emission_per_second(config=config)
-    if verbose:
-        print(f"Fluorophore photon emission per second = {fluorophore_emission_per_second}")
     intensities = fluorophore_image * fluorophore_emission_per_second 
 
-    if verbose:
-        print("Applying point spread function to light intensity array...")
     # TODO At present - we can take this (inexpensive) calculation of the kernel out of the loop
     # But eventually want to make the parameters stochastic so the kernel will be recalculated each time
     psf_kernel = get_psf_kernel(config=config)
-    intensities = scipy.signal.convolve2d(intensities, psf_kernel, mode='same')
+    image = scipy.signal.convolve2d(intensities, psf_kernel, mode='same')
 
-    if mode.startswith('demo'):
-        axs[axs_index].imshow(intensities, cmap='gray') #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Fluorophore image after PSF") #type: ignore
-        axs_index += 1 #type: ignore
-
-    if verbose:
-        print("Simulating shot noise...")
-    image = get_digital_signal(intensities=intensities,
+    image = get_digital_signal(intensities=image,
                                config=config)
-    if mode.startswith('demo'):
-        axs[axs_index].imshow(image, cmap='gray') #type: ignore
-        axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Image after Shot Noise") #type: ignore
-        axs_index += 1 #type: ignore
 
-    if verbose:
-        print("Quantizing intensities...")
-    image = quantize_intensities(image=image,
-                                 config=config)
+    # if verbose:
+    #     print("Quantizing intensities...")
+    # image = quantize_intensities(image=image,
+    #                              config=config)
+
+    # Reduce resolution
+    tile_size = config['tile_size']
+    if tile_size > 1:
+        image = pad_and_tile_sample(image, tile_size=tile_size)
+        mask = pad_and_tile_aggregate(mask, tile_size=tile_size, agg_func=np.max)
+
+    # Apply speckly noise
+    speckle_noise_mean = config['speckle_noise_mean']
+    speckle_noise_std = config['speckle_noise_std']
+    speckle_noise = np.maximum(np.random.normal(loc=speckle_noise_mean, scale=speckle_noise_std, size=image.shape), 0.)
+
+    image += speckle_noise * image.max()
+
     if mode.startswith('demo'):
         axs[axs_index].imshow(image, cmap='gray') #type: ignore
         axs[axs_index].axis('off') #type: ignore
-        axs[axs_index].set_title("Image after Quantization") #type: ignore
+        axs[axs_index].set_title("Synthetic Image") #type: ignore
         axs_index += 1 #type: ignore
 
     if mode.startswith('demo'):
@@ -186,7 +261,7 @@ def generate(tubulaton_output_file_path : Path,
 
     if mode.startswith('demo'):
         plt.tight_layout()
-    
+
     if verbose:
         print()
 
@@ -208,21 +283,6 @@ def extract_file_id(file_path : Path) -> int:
         return int(match.group(1))
     else:
         raise ValueError(f"The file name {file_path} does not match the 'tubulaton-[number].vtk' format.")
-
-def parse_number_or_range(value : str) -> range:
-    try:
-        if '-' in value:
-            # This is a range like 32-329
-            start, end = map(int, value.split('-'))
-            if start > end:
-                raise ValueError(f"Invalid range: '{value}' (start should be less than or equal to end)")
-            return range(start, end + 1)
-        else:
-            # This is a single number like 23
-            num = int(value)
-            return range(num, num + 1)
-    except ValueError:
-        raise ValueError(f"Invalid input format: '{value}' (must be a number or a range in format START-END)")
 
 def parse_args() -> argparse.Namespace:
     # Parse CL arguments
@@ -256,9 +316,17 @@ def parse_args() -> argparse.Namespace:
                                 - overwrite:        Overwrite any existing synthetic data in specified location
                                 - update:           Skip over any pre-existing synthetic data files""")
 
-    parser.add_argument('-i', '--input',
-                        type=Path,
-                        help="Input Path (Leave blank to use value in .env file)")
+    train_val_group = parser.add_mutually_exclusive_group()
+    train_val_group.add_argument('--train',
+                        action='store_true',
+                        help="Make all the data training")
+    train_val_group.add_argument('--val',
+                        action='store_true',
+                        help="Make all the data validation")
+
+    parser.add_argument('--show_3d', 
+                        action='store_true', 
+                        help='Show 3D models')
 
     parser.add_argument('-v', '--verbose', 
                         action='store_true', 
@@ -276,16 +344,14 @@ if __name__ == '__main__':
     load_dotenv(dotenv_path='../.env')
 
     mode = args.mode
+    show_3d = args.show_3d
     verbose = args.verbose
 
     dataset_name = args.name
 
     output_dir = Path(os.environ["GENERATION_OUTPUT_DIR"]) / dataset_name
 
-    if args.input is not None:
-        tubulaton_output_path = args.input
-    else:
-        tubulaton_output_path = Path(os.environ["TUBULATON_OUTPUT_DIR"])
+    tubulaton_output_path = Path(os.environ["TUBULATON_OUTPUT_DIR"]) / dataset_name
 
     config_file_dir = Path(os.environ["GENERATION_CONFIGS_DIR"])
     config_file_stem = args.config
@@ -298,15 +364,6 @@ if __name__ == '__main__':
     if verbose:
         print(f"Loaded config file: {config_file_path}")
 
-    if args.depoly is None:
-        depoly_proportion_distribution_info = config['depoly_proportion_distribution']
-        depoly_proportion_distribution  = getattr(np.random, depoly_proportion_distribution_info['name'])
-        params = depoly_proportion_distribution_info.get('params', {})
-        depoly_proportion = depoly_proportion_distribution(**params)
-    else:
-        depoly_proportion = args.depoly
-    if verbose:
-        print(f"Using depolymerization rate: {depoly_proportion}")
 
     # Get the tubulaton output file paths
     tubulaton_output_file_paths : list
@@ -329,7 +386,7 @@ if __name__ == '__main__':
         elif tubulaton_output_path.is_file():
             tubulaton_output_file_paths = [tubulaton_output_path]
         else:
-            raise ValueError(f"Provided [tubulaton_output_path]: {sys.argv[2]} is neither a file nor a directory!")
+            raise ValueError(f"Provided [tubulaton_output_path]: {tubulaton_output_path} is neither a file nor a directory!")
     
     # Check files have correct name format
     for tubulaton_output_file_path in tubulaton_output_file_paths:
@@ -345,17 +402,34 @@ if __name__ == '__main__':
         file_path_iterator = [file_path]
     else:
         file_path_iterator = tubulaton_output_file_paths
+        num_uses = config['num_uses']
+        file_path_iterator *= num_uses
 
     # print(f"WARNING: Truncating the file path lists for testing. Must delete this part!!!")
     # file_path_iterator = file_path_iterator[:10]
 
     train_eval_split = config['train_eval_split']
-    cutoff = int(len(file_path_iterator) * train_eval_split)
     train_counter = 1
     eval_counter = 1
+    if args.val:
+        cutoff = 0
+    elif args.train:
+        cutoff = len(file_path_iterator)
+    else:
+        cutoff = int(len(file_path_iterator) * train_eval_split)
 
     for index, tubulaton_output_file_path in enumerate(file_path_iterator):
         block_start_time = time.time()
+
+        if args.depoly is None:
+            depoly_proportion_distribution_info = config['depoly_proportion_distribution']
+            depoly_proportion_distribution  = getattr(np.random, depoly_proportion_distribution_info['name'])
+            params = depoly_proportion_distribution_info.get('params', {})
+            depoly_proportion = depoly_proportion_distribution(**params)
+        else:
+            depoly_proportion = args.depoly
+        if verbose:
+            print(f"Using depolymerization rate: {depoly_proportion}")
 
         file_id = extract_file_id(tubulaton_output_file_path)
 
@@ -385,6 +459,7 @@ if __name__ == '__main__':
                                         depoly_proportion=depoly_proportion,
                                         config=config,
                                         mode=mode,
+                                        show_3d=show_3d,
                                         verbose=verbose)
 
                 image = image / image.max() * 255.
@@ -398,7 +473,6 @@ if __name__ == '__main__':
 
                 if verbose:
                     print(f"Saved data to {image_file_path} and {mask_file_path}.")
-                    print()
             else:
                 if verbose:
                     print(f"Image and mask files for {tubulaton_output_file_path} already exist:")
@@ -411,6 +485,7 @@ if __name__ == '__main__':
                                     depoly_proportion=depoly_proportion,
                                     config=config,
                                     mode=mode,
+                                    show_3d=show_3d,
                                     verbose=verbose)
             
             if mode == 'demo_interactive':
@@ -435,6 +510,7 @@ if __name__ == '__main__':
         if verbose and mode != 'demo_interactive':
             time_taken = time.time() - block_start_time
             print(f"Took {time_taken:.2f} seconds.")
+            print("\n" * 2 + "#" * 130 + "\n"*2)
 
 
     time_taken = time.time() - start_time

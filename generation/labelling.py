@@ -30,7 +30,7 @@ def get_mask(mt_points : np.ndarray,
             box_x_max = min(new_x+mt_label_point_radius, int(x_max - x_min))
 
             image[box_y_min:box_y_max, box_x_min:box_x_max] = 1
-    if verbose:
-        print(f"{hits} tubulin found in focal plane.")
+    # if verbose:
+    #     print(f"{hits} tubulin found in focal plane.")
 
     return image
